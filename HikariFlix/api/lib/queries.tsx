@@ -58,7 +58,7 @@ export const GET_TRENDING_ANIME = gql`
   }
 `;
 
-export const GET_TOP_100_ANIME_BY_AVERGAE_SCORE = gql`
+export const GET_TOP_100_ANIME_BY_AVERAGE_SCORE = gql`
   query GetTop100AnimeByVotes {
     Page(page: 1, perPage: 100) {
       media(type: ANIME, sort: SCORE_DESC) {

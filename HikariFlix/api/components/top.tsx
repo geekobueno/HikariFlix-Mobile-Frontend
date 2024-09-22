@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { useQuery } from '@apollo/client';
-import { GET_TOP_100_ANIME_BY_AVERGAE_SCORE } from '../lib/queries';
+import { GET_TOP_100_ANIME_BY_AVERAGE_SCORE } from '../lib/queries';
 import { useTheme } from '../../constants/theme';
 
 interface AnimeItem {
@@ -20,31 +20,31 @@ interface AnimeItem {
 
 const Top100Anime = () => {
   const currentTheme = useTheme();
-  const { loading, error, data } = useQuery(GET_TOP_100_ANIME_BY_AVERGAE_SCORE);
+  const { loading, error, data } = useQuery(GET_TOP_100_ANIME_BY_AVERAGE_SCORE);
   const { width: screenWidth } = useWindowDimensions();
 
   if (loading) return <Text style={{ color: currentTheme.textColor }}>Loading...</Text>;
   if (error) return <Text style={{ color: currentTheme.textColor }}>Error: {error.message}</Text>;
 
   const isLargeScreen = screenWidth > 768; // Adjust this breakpoint as needed
-  const numColumns = isLargeScreen ? 1 : Math.floor(screenWidth / 200);
+  const numColumns = isLargeScreen ? Math.floor(screenWidth / 200) : 1;
 
   const renderItem = ({ item, index }: { item: AnimeItem; index: number }) => (
     <View style={[
       styles.itemContainer,
-      isLargeScreen ? styles.tableRow : { width: screenWidth / numColumns - 20 }
+      isLargeScreen ? { width: screenWidth / numColumns - 20 } : styles.tableRow
     ]}>
-      {isLargeScreen && (
+      {!isLargeScreen && (
         <Text style={[styles.rankText, { color: currentTheme.textColor }]}>{index + 1}</Text>
       )}
       <Image 
         source={{ uri: item.coverImage.medium }} 
-        style={isLargeScreen ? styles.tableImage : styles.gridImage} 
+        style={isLargeScreen ? styles.gridImage : styles.tableImage} 
       />
-      <View style={isLargeScreen ? styles.tableTextContainer : styles.gridTextContainer}>
+      <View style={isLargeScreen ? styles.gridTextContainer : styles.tableTextContainer}>
         <Text 
           style={[styles.title, { color: currentTheme.textColor }]} 
-          numberOfLines={isLargeScreen ? 1 : 2}
+          numberOfLines={isLargeScreen ? 2 : 1}
         >
           {item.title.romaji}
         </Text>
