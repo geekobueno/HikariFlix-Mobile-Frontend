@@ -1,17 +1,17 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { useTheme } from '../../constants/theme'; // Import the useTheme hook
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const currentTheme = useTheme(); // Use the useTheme hook to get the current theme
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colorScheme === 'dark' ? '#4a9eff' : '#0066cc',
-        tabBarInactiveTintColor: colorScheme === 'dark' ? '#888888' : '#666666',
+        tabBarActiveTintColor: currentTheme.tabBarIconColor,
+        tabBarInactiveTintColor: currentTheme.tabBarInactiveTintColor || '#888', // Fallback color if not defined
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#f0f0f0',
+          backgroundColor: currentTheme.tabBarColor,
         },
       }}
     >
