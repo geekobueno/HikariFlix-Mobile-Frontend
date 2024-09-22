@@ -1,2 +1,4 @@
 # TachiAnime-Frontend 
-The frontend for the TachiAnime project
+The mobile frontend for the TachiAnime project
+
+built with react native and expo
