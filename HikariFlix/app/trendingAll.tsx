@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, Image, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, FlatList, StyleSheet, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { useNavigation } from 'expo-router';
 import { useQuery } from '@apollo/client';
-import { GET_TOP_100_ANIME_BY_AVERAGE_SCORE } from '../lib/queries';
-import { useTheme } from '../../constants/theme';
+import { GET_TRENDING_ANIME } from '../api/lib/queries';
+import { useTheme } from '../constants/theme';
 
 interface AnimeItem {
   id: number;
@@ -14,16 +15,26 @@ interface AnimeItem {
   coverImage: {
     medium: string;
   };
-  favourites: number;
-  averageScore: number;
+  popularity: number;
+  trending: number;
 }
 
-const Top100Anime = () => {
+const AllTrendingAnime: React.FC = () => {
+  const navigation = useNavigation();
   const currentTheme = useTheme();
-  const { loading, error, data } = useQuery(GET_TOP_100_ANIME_BY_AVERAGE_SCORE);
+  const [page, setPage] = useState(1);
+  const { loading, error, data, fetchMore } = useQuery(GET_TRENDING_ANIME, {
+    variables: { page: 1, perPage: 20 },
+  });
   const { width: screenWidth } = useWindowDimensions();
 
-  if (loading) return <Text style={{ color: currentTheme.textColor }}>Loading...</Text>;
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'All Trending Anime',
+    });
+  }, [navigation]);
+
+  if (loading && page === 1) return <ActivityIndicator size="large" color={currentTheme.textColor} />;
   if (error) return <Text style={{ color: currentTheme.textColor }}>Error: {error.message}</Text>;
 
   const isLargeScreen = screenWidth > 768; // Adjust this breakpoint as needed
@@ -32,6 +43,7 @@ const Top100Anime = () => {
   const renderItem = ({ item, index }: { item: AnimeItem; index: number }) => (
     <View style={[
       styles.itemContainer,
+      { backgroundColor: currentTheme.backgroundColor },
       isLargeScreen ? { width: screenWidth / numColumns - 20 } : styles.tableRow
     ]}>
       {!isLargeScreen && (
@@ -43,26 +55,56 @@ const Top100Anime = () => {
       />
       <View style={isLargeScreen ? styles.gridTextContainer : styles.tableTextContainer}>
         <Text 
-          style={[styles.title, { color: currentTheme.textColor }]} 
-          numberOfLines={isLargeScreen ? 2 : 1}
+          style={[
+            styles.title, 
+            { color: currentTheme.textColor }
+          ]} 
+          numberOfLines={3}
+          ellipsizeMode="tail"
         >
-          {item.title.romaji}
+          {item.title.english || item.title.romaji}
         </Text>
         <Text style={[styles.subtitle, { color: currentTheme.textColor }]}>
-          {item.averageScore} points
+          {item.trending} Trend points
         </Text>
       </View>
     </View>
   );
 
+  const loadMore = () => {
+    if (!loading) {
+      setPage(prevPage => prevPage + 1);
+      fetchMore({
+        variables: {
+          page: page + 1,
+          perPage: 20,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => {
+          if (!fetchMoreResult) return prev;
+          return {
+            Page: {
+              ...fetchMoreResult.Page,
+              media: [...prev.Page.media, ...fetchMoreResult.Page.media],
+            },
+          };
+        },
+      });
+    }
+  };
+
   return (
-    <FlatList
-      data={data.Page.media}
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={renderItem}
-      numColumns={numColumns}
-      key={numColumns}
-    />
+    <View style={{ flex: 1, backgroundColor: currentTheme.backgroundColor }}>
+      <FlatList
+        data={data.Page.media}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id.toString()}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.1}
+        ListFooterComponent={() => loading && <ActivityIndicator size="small" color={currentTheme.textColor} />}
+        numColumns={numColumns}
+        key={numColumns}
+      />
+    </View>
   );
 };
 
@@ -111,9 +153,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginRight: 10,
-    width: 30,
+    width: 40,
     textAlign: 'center',
   },
 });
 
-export default Top100Anime;
+export default AllTrendingAnime;

@@ -1,4 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Tabs } from 'expo-router';
 import { useTheme } from '../../constants/theme'; // Import the useTheme hook
 
@@ -27,6 +28,13 @@ export default function TabLayout() {
         options={{
           title: '',
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="search" color={color} />,
+        }}
+      />
+       <Tabs.Screen
+        name="downloads"
+        options={{
+          title: '',
+          tabBarIcon: ({ color }) => <MaterialIcons name="download" size={28} color={color} />,
         }}
       />
       <Tabs.Screen

@@ -1,46 +1,43 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import Popular from '../../api/components/popular';
-import Trending from '../../api/components/trending';
-import Top100Anime from '../../api/components/top';
-import Header from '../../api/components/header';
-import { ApolloProvider } from '@apollo/client';
-import client from '../../api/lib/apollo';
-import { useTheme } from '../../constants/theme'; // Import the useTheme hook
+import { useRouter } from 'expo-router';
+import Popular from '../homescreen/popular';
+import Trending from '../homescreen/trending';
+import Top100Anime from '../homescreen/top';
+import Featured from '../homescreen/featured';
+import { useTheme } from '../../constants/theme';
 
 export default function HomeScreen() {
-  const currentTheme = useTheme(); // Use the useTheme hook to get the current theme
+  const currentTheme = useTheme();
+  const router = useRouter();
 
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.backgroundColor }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: currentTheme.headerBackgroundColor }]}>
-        <Text style={[styles.headerText, { color: currentTheme.headerTextColor }]}>N</Text>
+        <Text style={[styles.headerText, { color: currentTheme.headerTextColor }]}>H</Text>
         <View style={styles.headerButtons}>
-          <TouchableOpacity><Text style={[styles.headerButtonText, { color: currentTheme.headerTextColor }]}>Tv Shows</Text></TouchableOpacity>
-          <TouchableOpacity><Text style={[styles.headerButtonText, { color: currentTheme.headerTextColor }]}>Movies</Text></TouchableOpacity>
-          <TouchableOpacity><Text style={[styles.headerButtonText, { color: currentTheme.headerTextColor }]}>Categories</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/category')}>
+            <Text style={[styles.headerButtonText, { color: currentTheme.headerTextColor }]}>Categories</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* Content */}
       <ScrollView>
-        {/* Featured Content */}
-        <ApolloProvider client={client}>
-          <Header />
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Popular Anime</Text>
-            <Popular />
-          </View>
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Trending Now</Text>
-            <Trending />
-          </View>
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Top 100 Anime by Votes</Text>
-            <Top100Anime />
-          </View>
-        </ApolloProvider>
+        <Featured />
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Popular Anime</Text>
+          <Popular />
+        </View>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Trending Now</Text>
+          <Trending />
+        </View>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Top Anime by Votes</Text>
+          <Top100Anime />
+        </View>
       </ScrollView>
     </View>
   );
@@ -73,5 +70,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     marginLeft: 10,
+    marginBottom: 10,
   },
 });

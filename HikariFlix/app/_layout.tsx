@@ -1,28 +1,68 @@
 import React from 'react';
-import { Stack } from 'expo-router/stack';
+import { Stack } from 'expo-router';
 import { useColorScheme } from 'react-native';
+import { ApolloProvider } from '@apollo/client';
+import client from '../api/lib/apollo';
+import { useTheme } from '../constants/theme';
 
-export default function Layout() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const currentTheme = useTheme();
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#f0f0f0',
-        },
-        headerTintColor: colorScheme === 'dark' ? '#ffffff' : '#000000',
-        contentStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#121212' : '#ffffff',
-        },
-      }}
-    >
-      <Stack.Screen 
-        name="(tabs)" 
-        options={{ 
-          headerShown: false,
-        }} 
-      />
-    </Stack>
+    <ApolloProvider client={client}>
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: currentTheme.headerBackgroundColor,
+          },
+          headerTintColor: currentTheme.headerTextColor,
+        }}
+      >
+        <Stack.Screen 
+          name="(tabs)" 
+          options={{ 
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="category" 
+          options={{ 
+            title: 'Categories',
+          }} 
+        />
+        <Stack.Screen 
+          name="category-anime" 
+          options={{ 
+            title: 'Category Anime',
+          }} 
+        />
+        <Stack.Screen 
+          name="anime-details" 
+          options={{ 
+            title: 'Anime Details',
+          }} 
+        />
+        <Stack.Screen 
+          name="popularAll" 
+          options={{ 
+            title: 'All Popular Anime',
+          }} 
+        />
+        <Stack.Screen 
+          name="trendingAll" 
+          options={{ 
+            title: 'All Trending Anime',
+          }} 
+        />
+        <Stack.Screen 
+          name="all-top-anime" 
+          options={{ 
+            title: 'Top Anime',
+          }} 
+        />
+        {/* Add other screens as needed */}
+      </Stack>
+    </ApolloProvider>
   );
 }
