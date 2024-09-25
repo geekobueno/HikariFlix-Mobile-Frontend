@@ -13,7 +13,11 @@ const AnimeCategories = () => {
 
   const numColumns = width > 768 ? 4 : 2;
 
-  if (loading) return <ActivityIndicator size="large" color={currentTheme.textColor} />;
+  if (loading) return (
+    <View style={[styles.loadingContainer, { backgroundColor: currentTheme.backgroundColor }]}>
+      <ActivityIndicator size="large" color={currentTheme.textColor} />
+    </View>
+  );
   if (error) return <Text style={{ color: currentTheme.textColor }}>Error: {error.message}</Text>;
 
   const renderItem = ({ item }: { item: string }) => (
@@ -77,6 +81,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

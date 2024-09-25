@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, useColorScheme } from 'react-native';
-import AnimeSearch from '../../api/components/AnimeSearch';
+import AnimeSearch from '../searchScreen/AnimeSearch';
 import { ApolloProvider } from '@apollo/client';
 import client from '../../api/lib/apollo';
 

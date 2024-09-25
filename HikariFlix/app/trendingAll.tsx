@@ -34,7 +34,11 @@ const AllTrendingAnime: React.FC = () => {
     });
   }, [navigation]);
 
-  if (loading && page === 1) return <ActivityIndicator size="large" color={currentTheme.textColor} />;
+  if (loading) return (
+    <View style={[styles.loadingContainer, { backgroundColor: currentTheme.backgroundColor }]}>
+      <ActivityIndicator size="large" color={currentTheme.textColor} />
+    </View>
+  );
   if (error) return <Text style={{ color: currentTheme.textColor }}>Error: {error.message}</Text>;
 
   const isLargeScreen = screenWidth > 768; // Adjust this breakpoint as needed
@@ -155,6 +159,11 @@ const styles = StyleSheet.create({
     marginRight: 10,
     width: 40,
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

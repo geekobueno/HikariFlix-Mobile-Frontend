@@ -34,7 +34,11 @@ const AllPopularAnime: React.FC = () => {
     });
   }, [navigation]);
 
-  if (loading && page === 1) return <ActivityIndicator size="large" color={currentTheme.textColor} />;
+  if (loading) return (
+    <View style={[styles.loadingContainer, { backgroundColor: currentTheme.backgroundColor }]}>
+      <ActivityIndicator size="large" color={currentTheme.textColor} />
+    </View>
+  );
   if (error) return <Text style={{ color: currentTheme.textColor }}>Error: {error.message}</Text>;
 
   const isLargeScreen = screenWidth > 768; // Adjust this breakpoint as needed
@@ -109,6 +113,11 @@ const AllPopularAnime: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   itemContainer: {
     padding: 10,
     margin: 5,

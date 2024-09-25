@@ -1,9 +1,11 @@
-import React, { useLayoutEffect } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, useWindowDimensions } from 'react-native';
+import React, { useLayoutEffect, useEffect, useState } from 'react';
+import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useTheme } from '../constants/theme';
+import { useFavorites } from './favoriteScreen/animeFav';
 import { useLocalSearchParams } from 'expo-router';
 import { GET_ANIME_DETAILS } from '../api/lib/queries';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 interface AnimeDetails {
@@ -33,15 +35,18 @@ interface AnimeDetails {
 }
 
 const AnimeDetails = () => {
-  const currentTheme = useTheme();
-  const navigation = useNavigation();
   const { animeId } = useLocalSearchParams();
-  const { width: screenWidth } = useWindowDimensions();
-
   const { loading, error, data } = useQuery(GET_ANIME_DETAILS, {
     variables: { id: Number(animeId) },
   });
 
+  const currentTheme = useTheme();
+  const navigation = useNavigation();
+  const { addFavorite, removeFavorite, isFavorite } = useFavorites();
+
+  const [isFav, setIsFav] = useState(false);
+
+  // Set navigation title based on anime data
   useLayoutEffect(() => {
     if (data && data.Media) {
       navigation.setOptions({
@@ -50,16 +55,47 @@ const AnimeDetails = () => {
     }
   }, [navigation, data]);
 
-  if (loading) return <ActivityIndicator size="large" color={currentTheme.textColor} />;
+  // Determine if the anime is a favorite when the data is loaded
+  useEffect(() => {
+    if (data && data.Media) {
+      setIsFav(isFavorite(data.Media.id));  // Initial favorite state
+    }
+  }, [data, isFavorite]); // Dependencies to check for updates
+
+  if (loading) return (
+    <View style={[styles.loadingContainer, { backgroundColor: currentTheme.backgroundColor }]}>
+      <ActivityIndicator size="large" color={currentTheme.textColor} />
+    </View>
+  );
+
   if (error) return <Text style={{ color: currentTheme.textColor }}>Error: {error.message}</Text>;
 
-  const anime: AnimeDetails = data.Media;
+  const anime: AnimeDetails = data.Media; // Anime is guaranteed to be defined here
+
+  const handleFavoriteToggle = () => {
+    if (isFav) {
+      removeFavorite(anime.id);
+    } else {
+      addFavorite(anime);
+    }
+    setIsFav(!isFav); // Update local state immediately for instant UI feedback
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: currentTheme.backgroundColor }]}>
       {anime.bannerImage && (
         <Image source={{ uri: anime.bannerImage }} style={styles.bannerImage} />
       )}
+      <TouchableOpacity 
+        onPress={handleFavoriteToggle}
+        style={styles.favoriteButton}
+      >
+        <Ionicons 
+          name={isFav ? "heart" : "heart-outline"} 
+          size={28} 
+          color={isFav ? "red" : currentTheme.textColor} 
+        />
+      </TouchableOpacity>
       <View style={[styles.contentContainer, { backgroundColor: currentTheme.backgroundColor }]}>
         <Image source={{ uri: anime.coverImage.large }} style={styles.coverImage} />
         <Text style={[styles.title, { color: currentTheme.textColor }]}>
@@ -109,6 +145,17 @@ const AnimeDetails = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   bannerImage: {
     width: '100%',
@@ -172,3 +219,4 @@ const styles = StyleSheet.create({
 });
 
 export default AnimeDetails;
+

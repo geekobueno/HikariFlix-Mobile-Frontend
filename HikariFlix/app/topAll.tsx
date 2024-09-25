@@ -65,7 +65,11 @@ const AllTopAnime = () => {
     </TouchableOpacity>
   );
 
-  if (loading && page === 1) return <ActivityIndicator size="large" color={currentTheme.textColor} />;
+  if (loading) return (
+    <View style={[styles.loadingContainer, { backgroundColor: currentTheme.backgroundColor }]}>
+      <ActivityIndicator size="large" color={currentTheme.textColor} />
+    </View>
+  );
   if (error) return <Text style={{ color: currentTheme.textColor }}>Error: {error.message}</Text>;
 
   return (
@@ -118,6 +122,11 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     fontSize: 14,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

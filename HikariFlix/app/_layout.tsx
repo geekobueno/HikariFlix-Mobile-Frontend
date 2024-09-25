@@ -56,12 +56,11 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
-          name="all-top-anime" 
+          name="topAll" 
           options={{ 
             title: 'Top Anime',
           }} 
         />
-        {/* Add other screens as needed */}
       </Stack>
     </ApolloProvider>
   );
