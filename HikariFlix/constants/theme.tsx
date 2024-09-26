@@ -16,7 +16,7 @@ const darkTheme = {
   primaryColor: '#b0b0b0',
   backgroundColor: '#121212',
   textColor: '#fff',
-  tabBarColor: '#1e1e1e',
+  tabBarColor: '#000',
   tabBarIconColor: '#fff',
   tabBarInactiveTintColor: '#888',
   headerBackgroundColor: '#000',

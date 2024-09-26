@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useQuery } from '@apollo/client';
-import { GET_TRENDING_ANIME } from '../../api/lib/queries';
+import { GET_TRENDING_ANIME } from '../../api/graphQL/queries';
 import { useTheme } from '../../constants/theme'; // Import the useTheme hook
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';

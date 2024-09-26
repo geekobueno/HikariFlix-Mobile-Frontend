@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { useQuery } from '@apollo/client';
-import { GET_ANIME_GENRES } from '../api/lib/queries';
+import { GET_ANIME_GENRES } from '../api/graphQL/queries';
 import { useTheme } from '../constants/theme';
 import { useRouter } from 'expo-router';
 

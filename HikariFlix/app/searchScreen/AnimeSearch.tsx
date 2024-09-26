@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, FlatList, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useQuery } from '@apollo/client';
-import { SEARCH_ANIME } from '../../api/lib/queries';
+import { SEARCH_ANIME } from '../../api/graphQL/queries';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../constants/theme';
 

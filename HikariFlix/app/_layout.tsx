@@ -1,17 +1,15 @@
 import React from 'react';
 import { Stack } from 'expo-router';
-import { useColorScheme } from 'react-native';
 import { ApolloProvider } from '@apollo/client';
-import client from '../api/lib/apollo';
+import client from '../api/graphQL/apollo';
 import { useTheme } from '../constants/theme';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const currentTheme = useTheme();
 
   return (
     <ApolloProvider client={client}>
-      <Stack
+      <Stack 
         screenOptions={{
           headerStyle: {
             backgroundColor: currentTheme.headerBackgroundColor,

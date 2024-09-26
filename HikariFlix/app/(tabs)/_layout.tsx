@@ -1,12 +1,14 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Tabs } from 'expo-router';
-import { useTheme } from '../../constants/theme'; // Import the useTheme hook
+import { useTheme } from '../../constants/theme';
+
 
 export default function TabLayout() {
   const currentTheme = useTheme(); // Use the useTheme hook to get the current theme
 
   return (
+    
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: currentTheme.tabBarIconColor,
@@ -43,14 +45,7 @@ export default function TabLayout() {
           title: '',
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="heart" color={color} />,
         }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: '',
-          tabBarIcon: ({ color }) => <FontAwesome size={28} name="cog" color={color} />,
-        }}
-      />
+      /> 
     </Tabs>
   );
 }

@@ -101,7 +101,7 @@ export const GET_ANIME_BY_GENRE = gql`
           english
         }
         coverImage {
-          medium
+          large
         }
         averageScore
       }
@@ -138,5 +138,3 @@ export const GET_ANIME_DETAILS = gql`
     }
   }
 `;
-
-// Add more queries as needed

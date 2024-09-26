@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, FlatList, StyleSheet, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { View, Text, Image, FlatList, StyleSheet, useWindowDimensions, ActivityIndicator,TouchableOpacity } from 'react-native';
 import { useQuery } from '@apollo/client';
-import { GET_POPULAR_ANIME } from '../api/lib/queries';
+import { GET_POPULAR_ANIME } from '../api/graphQL/queries';
 import { useTheme } from '../constants/theme';
-import { useNavigation } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 
 interface AnimeItem {
   id: number;
@@ -19,7 +19,9 @@ interface AnimeItem {
   averageScore: number;
 }
 
+
 const AllPopularAnime: React.FC = () => {
+  const router = useRouter();
   const currentTheme = useTheme();
   const navigation = useNavigation();
   const [page, setPage] = useState(1);
@@ -45,6 +47,7 @@ const AllPopularAnime: React.FC = () => {
   const numColumns = isLargeScreen ? Math.floor(screenWidth / 200) : 1;
 
   const renderItem = ({ item, index }: { item: AnimeItem; index: number }) => (
+    <TouchableOpacity  onPress={() => router.push({ pathname: '/anime-details', params: { animeId: item.id } })}>
     <View style={[
       styles.itemContainer,
       { backgroundColor: currentTheme.backgroundColor },
@@ -73,6 +76,7 @@ const AllPopularAnime: React.FC = () => {
         </Text>
       </View>
     </View>
+    </TouchableOpacity>
   );
 
   const loadMore = () => {

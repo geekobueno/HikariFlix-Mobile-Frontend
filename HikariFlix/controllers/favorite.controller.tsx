@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useContext } from 'react';
 
 interface AnimeDetails {
   id: number;
@@ -66,5 +65,5 @@ export const useFavorites = () => {
   };
 
   // Return values including loading and error state
-  return { favorites, addFavorite, removeFavorite, isFavorite, loading, error };
+  return { favorites, addFavorite, removeFavorite, isFavorite,loadFavorites, loading, error };
 };

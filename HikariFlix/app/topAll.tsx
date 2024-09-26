@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useQuery } from '@apollo/client';
-import { GET_TOP_ANIME_BY_AVERAGE_SCORE } from '../api/lib/queries';
+import { GET_TOP_ANIME_BY_AVERAGE_SCORE } from '../api/graphQL/queries';
 import { useTheme } from '../constants/theme';
 
 interface AnimeItem {

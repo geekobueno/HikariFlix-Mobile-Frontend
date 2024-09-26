@@ -2,11 +2,18 @@ import React, { useLayoutEffect, useEffect, useState } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useTheme } from '../constants/theme';
-import { useFavorites } from './favoriteScreen/animeFav';
+import { useFavorites } from '../controllers/favorite.controller';
 import { useLocalSearchParams } from 'expo-router';
-import { GET_ANIME_DETAILS } from '../api/lib/queries';
+import { GET_ANIME_DETAILS } from '../api/graphQL/queries';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { searchAnime, fetchEpisodes } from '../api/restAPI/api'; 
+
+interface Anime {
+  id: string; // Unique identifier for the anime
+  title: string; // Title of the anime
+  data_id: string; // Additional identifier or unique data ID from the response
+}
 
 interface AnimeDetails {
   id: number;
@@ -35,6 +42,7 @@ interface AnimeDetails {
 }
 
 const AnimeDetails = () => {
+  const [animeData, setAnimeData] = useState<AnimeDetails | null>(null); // Ensure this is declared inside the component
   const { animeId } = useLocalSearchParams();
   const { loading, error, data } = useQuery(GET_ANIME_DETAILS, {
     variables: { id: Number(animeId) },
@@ -45,6 +53,8 @@ const AnimeDetails = () => {
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
 
   const [isFav, setIsFav] = useState(false);
+  const [episodeList, setEpisodeList] = useState<any[]>([]); // Adjust the type as needed
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Set navigation title based on anime data
   useLayoutEffect(() => {
@@ -59,8 +69,64 @@ const AnimeDetails = () => {
   useEffect(() => {
     if (data && data.Media) {
       setIsFav(isFavorite(data.Media.id));  // Initial favorite state
+      handleSearch(data.Media.title.english || data.Media.title.romaji); // Use either English or Romaji title
     }
   }, [data, isFavorite]); // Dependencies to check for updates
+
+  const handleSearch = async (keyword: string) => {
+    try {
+        const searchResult: Anime[] = await searchAnime(keyword); // Search using the title
+        if (searchResult.length === 0) {
+            setSearchError('No matching anime found');
+            return;
+        }
+
+        const matchedAnime = searchResult.find(anime => anime.title.toLowerCase() === keyword.toLowerCase());
+
+        if (!matchedAnime) {
+            setSearchError('No exact match found for the specified title');
+            return;
+        }
+
+        // Set anime data using matchedAnime
+        const animeDetails: AnimeDetails = {
+            id: Number(matchedAnime.id),
+            title: {
+                romaji: matchedAnime.title,
+                english: null,
+                native: matchedAnime.title,
+            },
+            coverImage: { large: '' },
+            bannerImage: null,
+            description: '',
+            genres: [],
+            averageScore: 0,
+            popularity: 0,
+            episodes: 0,
+            season: '',
+            seasonYear: 0,
+            status: '',
+            studios: { nodes: [] },
+        };
+
+        setAnimeData(animeDetails); // Set the correctly typed anime data
+
+        // Fetch episodes using the matchedAnime ID
+        const episodeData = await fetchEpisodes(matchedAnime.id);
+        setEpisodeList(episodeData);
+    } catch (err) {
+        setSearchError(err instanceof Error ? err.message : 'An unknown error occurred');
+    }
+  };
+
+  const handleFavoriteToggle = () => {
+    if (isFav) {
+      removeFavorite(data.Media.id);
+    } else {
+      addFavorite(data.Media);
+    }
+    setIsFav(!isFav); // Update local state immediately for instant UI feedback
+  };
 
   if (loading) return (
     <View style={[styles.loadingContainer, { backgroundColor: currentTheme.backgroundColor }]}>
@@ -70,16 +136,9 @@ const AnimeDetails = () => {
 
   if (error) return <Text style={{ color: currentTheme.textColor }}>Error: {error.message}</Text>;
 
-  const anime: AnimeDetails = data.Media; // Anime is guaranteed to be defined here
+  if (searchError) return <Text style={{ color: currentTheme.textColor }}>{searchError}</Text>;
 
-  const handleFavoriteToggle = () => {
-    if (isFav) {
-      removeFavorite(anime.id);
-    } else {
-      addFavorite(anime);
-    }
-    setIsFav(!isFav); // Update local state immediately for instant UI feedback
-  };
+  const anime: AnimeDetails = data.Media; // Anime is guaranteed to be defined here
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: currentTheme.backgroundColor }]}>
@@ -137,6 +196,18 @@ const AnimeDetails = () => {
         <Text style={[styles.description, { color: currentTheme.textColor }]}>
           {anime.description.replace(/<[^>]*>/g, '')}
         </Text>
+
+        {/* Episode List */}
+        <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Episodes</Text>
+        {episodeList.length === 0 ? (
+          <Text style={{ color: currentTheme.textColor }}>No episodes available.</Text>
+        ) : (
+          episodeList.map((episode, index) => (
+            <Text key={index} style={[styles.episodeText, { color: currentTheme.textColor }]}>
+              Episode {episode.id}: {episode.title} {/* Adjust according to the structure of your episode data */}
+            </Text>
+          ))
+        )}
       </View>
     </ScrollView>
   );
@@ -216,7 +287,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 20,
   },
+  episodeText: {
+    fontSize: 16,
+    marginBottom: 5,
+  },
 });
 
 export default AnimeDetails;
-

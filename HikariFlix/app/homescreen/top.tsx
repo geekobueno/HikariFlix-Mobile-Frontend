@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, FlatList, StyleSheet, useWindowDimensions, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useQuery } from '@apollo/client';
-import { GET_TOP_ANIME_BY_AVERAGE_SCORE } from '../../api/lib/queries';
+import { GET_TOP_ANIME_BY_AVERAGE_SCORE } from '../../api/graphQL/queries';
 import { useTheme } from '../../constants/theme';
 import { useRouter } from 'expo-router';
 

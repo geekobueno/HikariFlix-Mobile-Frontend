@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
-import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useTheme } from '../../constants/theme';
-import { useFavorites } from '../favoriteScreen/animeFav';
+import { useFavorites } from '../../controllers/favorite.controller';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -19,10 +19,16 @@ interface AnimeItem {
 
 export default function Favorites() {
   const currentTheme = useTheme();
-  const { favorites, removeFavorite } = useFavorites();
+  const { favorites, removeFavorite, loadFavorites } = useFavorites();
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false); // State to manage refreshing
 
-  // Handle removing an item with confirmation
+  // Handler for pull-to-refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadFavorites(); // Reload the favorites
+    setRefreshing(false);
+  };
 
   const renderItem = ({ item }: { item: AnimeItem }) => (
     <TouchableOpacity 
@@ -52,6 +58,9 @@ export default function Favorites() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> // Pull-to-refresh control
+          }
         />
       ) : (
         <View style={styles.emptyState}>
@@ -61,6 +70,11 @@ export default function Favorites() {
           </Text>
         </View>
       )}
+
+      {/* Reload Button */}
+      <TouchableOpacity style={styles.reloadButton} onPress={onRefresh}>
+        <Text style={[styles.reloadText, { color: currentTheme.textColor }]}>Reload Favorites</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -87,7 +101,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 150,
     borderRadius: 5,
-    // Optional: Add some styling to the image, like margin
   },
   animeInfo: {
     flex: 1,
@@ -110,5 +123,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 18,
     textAlign: 'center',
+  },
+  reloadButton: {
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reloadText: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

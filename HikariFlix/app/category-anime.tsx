@@ -3,7 +3,7 @@ import { View, Text, FlatList, Image, StyleSheet, ActivityIndicator, TouchableOp
 import { useQuery } from '@apollo/client';
 import { useTheme } from '../constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { GET_ANIME_BY_GENRE } from '../api/lib/queries';
+import { GET_ANIME_BY_GENRE } from '../api/graphQL/queries';
 import { useNavigation } from '@react-navigation/native';
 
 interface AnimeItem {
@@ -13,7 +13,7 @@ interface AnimeItem {
       english: string | null;
     };
     coverImage: {
-      medium: string;
+      large: string;
     };
     averageScore: number;
   }
@@ -27,7 +27,7 @@ const CategoryAnime = () => {
   const { width: screenWidth } = useWindowDimensions();
 
   const { loading, error, data, fetchMore } = useQuery(GET_ANIME_BY_GENRE, {
-    variables: { genre, page: 1, perPage: 20 },
+    variables: { genre, page: 1, perPage: 30 },
   });
 
 const isLargeScreen = screenWidth > 768;
@@ -38,7 +38,7 @@ const isLargeScreen = screenWidth > 768;
       fetchMore({
         variables: {
           page: page + 1,
-          perPage: 20,
+          perPage: 30,
         },
         updateQuery: (prev, { fetchMoreResult }) => {
           if (!fetchMoreResult) return prev;
@@ -65,7 +65,7 @@ const isLargeScreen = screenWidth > 768;
       ]}
       onPress={() => router.push({ pathname: '/anime-details', params: { animeId: item.id } })}
     >
- <Image source={{ uri: item.coverImage.medium }} style={styles.coverImage} />
+ <Image source={{ uri: item.coverImage.large }} style={styles.coverImage} />
       <Text style={[styles.title, { color: currentTheme.textColor }]} numberOfLines={2}>
         {item.title.english || item.title.romaji}
       </Text>
@@ -96,7 +96,7 @@ const isLargeScreen = screenWidth > 768;
         keyExtractor={(item) => item.id.toString()}
         numColumns={numColumns}
         onEndReached={loadMore}
-        onEndReachedThreshold={0.1}
+        onEndReachedThreshold={0.50}
         ListFooterComponent={() => loading && <ActivityIndicator size="small" color={currentTheme.textColor} />}
       />
     </View>
@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   coverImage: {
-    width: '100%',
-    height: 200,
+    width: 200,
+    height: 300,
     borderRadius: 8,
     marginBottom: 10,
   },
