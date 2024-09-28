@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useEffect, useState } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, FlatList } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useTheme } from '../constants/theme';
 import { useFavorites } from '../controllers/favorite.controller';
@@ -9,10 +9,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { searchAnime, fetchEpisodes } from '../api/restAPI/api'; 
 
+
 interface Anime {
   id: string; // Unique identifier for the anime
   title: string; // Title of the anime
   data_id: string; // Additional identifier or unique data ID from the response
+}
+
+interface EpisodeResponse {
+  success: boolean;
+  results: Episode[]
+}
+
+interface Episode {
+  number: string;
+  episode_no: string;
+  id: string;
+  title: string;
+  japanese_title: string;
+}
+interface AnimeResponse {
+  success: boolean;
+  results: Anime
 }
 
 interface AnimeDetails {
@@ -41,8 +59,8 @@ interface AnimeDetails {
   };
 }
 
+
 const AnimeDetails = () => {
-  const [animeData, setAnimeData] = useState<AnimeDetails | null>(null); // Ensure this is declared inside the component
   const { animeId } = useLocalSearchParams();
   const { loading, error, data } = useQuery(GET_ANIME_DETAILS, {
     variables: { id: Number(animeId) },
@@ -53,7 +71,7 @@ const AnimeDetails = () => {
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
 
   const [isFav, setIsFav] = useState(false);
-  const [episodeList, setEpisodeList] = useState<any[]>([]); // Adjust the type as needed
+  const [episodeList, setEpisodeList] = useState<Episode[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   // Set navigation title based on anime data
@@ -74,48 +92,29 @@ const AnimeDetails = () => {
   }, [data, isFavorite]); // Dependencies to check for updates
 
   const handleSearch = async (keyword: string) => {
+    // Remove special characters from the keyword
+    const sanitizedKeyword = keyword.replace(/[^\w\s]/gi, '');
+
     try {
-        const searchResult: Anime[] = await searchAnime(keyword); // Search using the title
-        if (searchResult.length === 0) {
-            setSearchError('No matching anime found');
-            return;
-        }
+      const searchResult: AnimeResponse = await searchAnime(sanitizedKeyword);
+      console.log(searchResult)
+      const animeData = searchResult.results;
+      console.log(animeData)
 
-        const matchedAnime = searchResult.find(anime => anime.title.toLowerCase() === keyword.toLowerCase());
+      // Directly use the first item as the best match
+      const episodesResponse: EpisodeResponse = await fetchEpisodes(animeData.id);
+      if (episodesResponse.success && Array.isArray(episodesResponse.results)) {
+        setEpisodeList(episodesResponse.results);
+      } else {
+        setEpisodeList([]);
+      }
 
-        if (!matchedAnime) {
-            setSearchError('No exact match found for the specified title');
-            return;
-        }
+      console.log(`Best match found: ${animeData.title}`);
 
-        // Set anime data using matchedAnime
-        const animeDetails: AnimeDetails = {
-            id: Number(matchedAnime.id),
-            title: {
-                romaji: matchedAnime.title,
-                english: null,
-                native: matchedAnime.title,
-            },
-            coverImage: { large: '' },
-            bannerImage: null,
-            description: '',
-            genres: [],
-            averageScore: 0,
-            popularity: 0,
-            episodes: 0,
-            season: '',
-            seasonYear: 0,
-            status: '',
-            studios: { nodes: [] },
-        };
-
-        setAnimeData(animeDetails); // Set the correctly typed anime data
-
-        // Fetch episodes using the matchedAnime ID
-        const episodeData = await fetchEpisodes(matchedAnime.id);
-        setEpisodeList(episodeData);
     } catch (err) {
-        setSearchError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error in handleSearch:', err);
+      setSearchError(err instanceof Error ? err.message : 'An unknown error occurred');
+      setEpisodeList([]);
     }
   };
 
@@ -202,11 +201,16 @@ const AnimeDetails = () => {
         {episodeList.length === 0 ? (
           <Text style={{ color: currentTheme.textColor }}>No episodes available.</Text>
         ) : (
-          episodeList.map((episode, index) => (
-            <Text key={index} style={[styles.episodeText, { color: currentTheme.textColor }]}>
-              Episode {episode.id}: {episode.title} {/* Adjust according to the structure of your episode data */}
-            </Text>
-          ))
+          <FlatList
+            data={episodeList}
+            keyExtractor={(episode) => episode.id}
+            renderItem={({ item }) => (
+              <Text style={[styles.episodeText, { color: currentTheme.textColor }]}>
+                Episode {item.episode_no || item.number}: {item.title}
+                {item.japanese_title && ` (${item.japanese_title})`}
+              </Text>
+            )}
+          />
         )}
       </View>
     </ScrollView>
@@ -288,9 +292,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   episodeText: {
-    fontSize: 16,
+    fontSize: 14,
     marginBottom: 5,
   },
 });
 
 export default AnimeDetails;
+

@@ -72,10 +72,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    width: '100%',
   },
   searchInput: {
     height: 40,
-    borderWidth: 1,
+    borderWidth: 5,
     borderRadius: 8,
     paddingHorizontal: 10,
     marginBottom: 16,
