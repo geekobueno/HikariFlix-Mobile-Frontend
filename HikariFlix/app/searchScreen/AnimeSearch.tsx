@@ -48,7 +48,7 @@ const SearchScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.backgroundColor }]}>
       <TextInput
-        style={[styles.searchInput, { backgroundColor: currentTheme.backgroundColor, color: currentTheme.textColor }]}
+        style={[styles.searchInput, { backgroundColor: currentTheme.backgroundColor, color: currentTheme.textColor, borderColor: currentTheme.primaryColor }]}
         value={search}
         onChangeText={setSearch}
         placeholder="Search anime..."

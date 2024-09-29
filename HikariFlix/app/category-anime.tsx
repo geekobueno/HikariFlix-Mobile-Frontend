@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   coverImage: {
-    width: 200,
+    width: 150,
     height: 300,
     borderRadius: 8,
     marginBottom: 10,

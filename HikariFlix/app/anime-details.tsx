@@ -7,8 +7,44 @@ import { useLocalSearchParams } from 'expo-router';
 import { GET_ANIME_DETAILS } from '../api/graphQL/queries';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { searchAnime, fetchEpisodes } from '../api/restAPI/api'; 
+import { searchAnime, fetchEpisodes, fetchHentai } from '../api/restAPI/api'; 
 
+
+// Common Episode Interface
+interface CommonEpisode {
+  episodeNumber?: string;
+  id: string;
+  title: string;
+  japanese_title?: string;
+}
+
+// Interface for stream details
+interface HentaiStream {
+  width: number;
+  height: string;
+  size_mbs: number;
+  url: string;
+}
+
+
+// Interface for episode details
+interface HentaiEpisode {
+  id: number;
+  name: string;
+  slug?: string;
+}
+
+// Interface for the individual result object
+interface HentaiResult {
+  name: string;
+  streams: HentaiStream[];
+  episodes: HentaiEpisode[];
+}
+
+// Interface for the main response structure
+interface HentaiResponse {
+  results: HentaiResult[];
+}
 
 interface Anime {
   id: string; // Unique identifier for the anime
@@ -22,15 +58,15 @@ interface EpisodeResponse {
 }
 
 interface Episode {
-  number: string;
-  episode_no: string;
+  number?: string;
+  episode_no?: string;
   id: string;
   title: string;
-  japanese_title: string;
+  japanese_title?: string;
 }
 interface AnimeResponse {
   success: boolean;
-  results: Anime
+  result: Anime
 }
 
 interface AnimeDetails {
@@ -71,8 +107,11 @@ const AnimeDetails = () => {
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
 
   const [isFav, setIsFav] = useState(false);
-  const [episodeList, setEpisodeList] = useState<Episode[]>([]);
+  const [episodeList, setEpisodeList] = useState<CommonEpisode[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [noEpisodesFound, setNoEpisodesFound] = useState(false); // New state for no episodes found
+  const [loadingEpisodes, setLoadingEpisodes] = useState(true); // New state for episode loading
+  const [animeGenres, setAnimeGenres] = useState<string[]>([]); // New state to hold genres
 
   // Set navigation title based on anime data
   useLayoutEffect(() => {
@@ -88,35 +127,80 @@ const AnimeDetails = () => {
     if (data && data.Media) {
       setIsFav(isFavorite(data.Media.id));  // Initial favorite state
       handleSearch(data.Media.title.english || data.Media.title.romaji); // Use either English or Romaji title
+      setAnimeGenres(data.Media.genres); // Store genres without displaying them
     }
   }, [data, isFavorite]); // Dependencies to check for updates
 
   const handleSearch = async (keyword: string) => {
-    // Remove special characters from the keyword
-    const sanitizedKeyword = keyword.replace(/[^\w\s]/gi, '');
+    // Encode special characters in the keyword
+    const sanitizedKeyword = encodeURIComponent(keyword.replace(/[^\w\s]/gi, ' ')).replace(/%3A/g, ':');
 
     try {
-      const searchResult: AnimeResponse = await searchAnime(sanitizedKeyword);
-      console.log(searchResult)
-      const animeData = searchResult.results;
-      console.log(animeData)
+        // Fetch Hentai details
+        const search: HentaiResponse = await fetchHentai(sanitizedKeyword);
 
-      // Directly use the first item as the best match
-      const episodesResponse: EpisodeResponse = await fetchEpisodes(animeData.id);
-      if (episodesResponse.success && Array.isArray(episodesResponse.results)) {
-        setEpisodeList(episodesResponse.results);
-      } else {
-        setEpisodeList([]);
-      }
+        if (search.results.length > 0) {
+            const hentaiData = search.results[0]; // Take the first result
+            const episodes: CommonEpisode[] = hentaiData.episodes.map((episode) => ({
+                title: episode.name,
+                id: episode.id.toString(),
+                // If hentai doesn't have an episode number, leave it out
+            }));
 
-      console.log(`Best match found: ${animeData.title}`);
+            setEpisodeList(episodes); // Set the common episode list
+            setNoEpisodesFound(episodes.length === 0);
+            setLoadingEpisodes(false);
 
-    } catch (err) {
-      console.error('Error in handleSearch:', err);
-      setSearchError(err instanceof Error ? err.message : 'An unknown error occurred');
-      setEpisodeList([]);
+            console.log(`Hentai match found: ${hentaiData.name}`);
+        } else {
+            throw new Error("No results found in Hentai"); // Force the fallback to Anime
+        }
+    } catch (hentaiError) {
+        console.error('Hentai fetch error:', hentaiError);
+
+        // If the Hentai fetch fails, try searching for Anime
+        try {
+            const searchResult: AnimeResponse = await searchAnime(sanitizedKeyword);
+
+            if (!searchResult.success) {
+                setEpisodeList([]);
+                setNoEpisodesFound(true);
+                setLoadingEpisodes(false);
+                console.log("Anime search failed.");
+            } else {
+                const animeData = searchResult.result;
+
+                // Directly use the first item as the best match
+                const episodesResponse: EpisodeResponse = await fetchEpisodes(animeData.id);
+
+                if (episodesResponse.success && Array.isArray(episodesResponse.results)) {
+                    const episodes: CommonEpisode[] = episodesResponse.results.map((episode) => ({
+                        id: episode.id,
+                        title: episode.title,
+                        episodeNumber: episode.episode_no || episode.number, // Ensure the right property is assigned
+                    }));
+                    setEpisodeList(episodes); // Set the common episode list
+                    setNoEpisodesFound(episodes.length === 0); // Check if no episodes found
+                } else {
+                    setEpisodeList([]);
+                    setNoEpisodesFound(true); // Set to true if response is not successful
+                }
+
+                setLoadingEpisodes(false); // Set loading to false after fetching episodes
+
+                console.log(`Best match found: ${animeData.title}`);
+            }
+        } catch (animeError) {
+            console.error('Anime fetch error:', animeError);
+            setSearchError(animeError instanceof Error ? animeError.message : 'An unknown error occurred');
+            setEpisodeList([]);
+            setLoadingEpisodes(false); // Ensure loading is false on error
+        }
     }
-  };
+};
+
+  
+  
 
   const handleFavoriteToggle = () => {
     if (isFav) {
@@ -157,7 +241,7 @@ const AnimeDetails = () => {
       <View style={[styles.contentContainer, { backgroundColor: currentTheme.backgroundColor }]}>
         <Image source={{ uri: anime.coverImage.large }} style={styles.coverImage} />
         <Text style={[styles.title, { color: currentTheme.textColor }]}>
-          {anime.title.english || anime.title.romaji}
+         {anime.title.english || anime.title.romaji}
         </Text>
         <Text style={[styles.nativeTitle, { color: currentTheme.textColor }]}>
           {anime.title.native}
@@ -192,25 +276,34 @@ const AnimeDetails = () => {
           {anime.studios.nodes.map(studio => studio.name).join(', ')}
         </Text>
         <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Description</Text>
-        <Text style={[styles.description, { color: currentTheme.textColor }]}>
-          {anime.description.replace(/<[^>]*>/g, '')}
-        </Text>
+        {anime.description ? (
+          <Text style={[styles.description, { color: currentTheme.textColor }]}>
+            {anime.description.replace(/<[^>]*>/g, '')}
+          </Text>
+        ) : (
+          <Text style={[styles.description, { color: currentTheme.textColor }]}>
+            No description available.
+          </Text>
+        )}
 
         {/* Episode List */}
         <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Episodes</Text>
-        {episodeList.length === 0 ? (
-          <Text style={{ color: currentTheme.textColor }}>No episodes available.</Text>
+        {loadingEpisodes ? ( // Show loading indicator while episodes are loading
+          <ActivityIndicator size="small" color={currentTheme.textColor} />
+        ) : noEpisodesFound ? ( // Show message if no episodes found
+          <Text style={{ color: currentTheme.textColor }}>No episodes found for this anime.</Text>
         ) : (
           <FlatList
-            data={episodeList}
-            keyExtractor={(episode) => episode.id}
-            renderItem={({ item }) => (
-              <Text style={[styles.episodeText, { color: currentTheme.textColor }]}>
-                Episode {item.episode_no || item.number}: {item.title}
-                {item.japanese_title && ` (${item.japanese_title})`}
-              </Text>
-            )}
-          />
+  data={episodeList}
+  keyExtractor={(episode, index) => episode.id || index.toString()}
+  renderItem={({ item, index }) => (
+    <Text style={[styles.episodeText, { color: currentTheme.textColor }]}>
+      {item.episodeNumber ? `Episode ${item.episodeNumber}: ` : `Episode ${index + 1}: `}{item.title}
+      {item.japanese_title && ` (${item.japanese_title})`}
+    </Text>
+  )}
+/>
+
         )}
       </View>
     </ScrollView>
