@@ -40,3 +40,16 @@ export const fetchHentai = async (slug: string) => {
     }
   }
 };
+
+export const fetchHentaiStream = async (slug: string,ep_num: string) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/h/watch/${slug}/${ep_num}`);
+    return response.data; // Assuming the response has the episode data you need
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(`Axios error on hentaiStream: ${error.response?.data?.message || error.message}`);
+    } else {
+      throw new Error(`Fetch hentaiStream failed: ${error}`);
+    }
+  }
+};
