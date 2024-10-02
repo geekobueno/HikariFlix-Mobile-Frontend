@@ -28,6 +28,19 @@ export const fetchEpisodes = async (id: string) => {
   }
 };
 
+export const fetchStream = async (id: string) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/a/stream?id=${id}`);
+    return response.data; // Assuming the response has the episode data you need
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(`Axios error on episodes: ${error.response?.data?.message || error.message}`);
+    } else {
+      throw new Error(`Fetch episodes failed: ${error}`);
+    }
+  }
+};
+
 export const fetchHentai = async (slug: string) => {
   try {
     const response = await axios.get(`${BASE_URL}/h/watch/${slug}`);

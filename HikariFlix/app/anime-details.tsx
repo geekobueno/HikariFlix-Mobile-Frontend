@@ -1,13 +1,64 @@
 import React, { useLayoutEffect, useEffect, useState, useCallback } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, FlatList, ListRenderItem } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useTheme } from '../constants/theme';
 import { useFavorites } from '../controllers/favorite.controller';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GET_ANIME_DETAILS } from '../api/graphQL/queries';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { searchAnime, fetchEpisodes, fetchHentai, fetchHentaiStream } from '../api/restAPI/api';
+import { searchAnime, fetchEpisodes, fetchHentai, fetchHentaiStream, fetchStream } from '../api/restAPI/api';
+
+
+// Interface for a single source of the video (HLS stream, etc.)
+interface AnimeSource {
+  file: string;
+  type: string;
+}
+
+// Interface for a single track (captions, subtitles, thumbnails, etc.)
+interface AnimeTrack {
+  file: string;
+  label?: string;
+  kind: string;
+  default?: boolean; // Optional, as not all tracks will have this property
+}
+
+// Interface for the intro and outro timings
+interface AnimeIntroOutro {
+  start: number;
+  end: number;
+}
+
+// Interface for the decryption result, including video and track information
+interface AnimeDecryptionResult {
+  type: string; // e.g., "dub" or "sub"
+  source: {
+    sources: AnimeSource[];
+    tracks: AnimeTrack[];
+    encrypted: boolean;
+    intro: AnimeIntroOutro;
+    outro: AnimeIntroOutro;
+  };
+  server: string; // Server providing the stream
+}
+
+// Interface for a streamingInfo entry, which includes the status and decryption result
+interface AnimeStreamingInfo {
+  status: string; // e.g., "fulfilled"
+  value: {
+    decryptionResult: AnimeDecryptionResult;
+  };
+}
+
+// Main interface for the API response
+interface AnimeStreamingResponse {
+  success: boolean;
+  results: {
+    streamingInfo: AnimeStreamingInfo[];
+  };
+}
+
 
 // Common Episode Interface
 interface CommonEpisode {
@@ -49,6 +100,7 @@ interface Anime {
   id: string;
   title: string;
   data_id: string;
+  link: string;
 }
 
 interface EpisodeResponse {
@@ -96,6 +148,7 @@ interface AnimeDetails {
 }
 
 const AnimeDetails = () => {
+  const router = useRouter();
   const { animeId } = useLocalSearchParams();
   const { loading, error, data } = useQuery(GET_ANIME_DETAILS, {
     variables: { id: Number(animeId) },
@@ -222,6 +275,32 @@ const AnimeDetails = () => {
     }
   }, []);
 
+  const handleStreamSearch = useCallback(async (episodeId: string) => {
+    try {
+      const search = await fetchStream(episodeId);
+      return search.results.streamingInfo;
+    } catch (error) {
+      console.log(error);
+      return null;
+    }
+  }, []);
+
+  const handleEpisodePress = useCallback(async (episode: CommonEpisode) => {
+    const streamingInfo = await handleStreamSearch(episode.id);
+    if (streamingInfo) {
+      router.push({
+        pathname: '/streamScreen',
+        params: { 
+          episodeTitle: episode.title,
+          streamingInfo: JSON.stringify(streamingInfo)
+        }
+      });
+    } else {
+      // Handle the case when streaming info is not available
+      console.log("Streaming info not available for this episode");
+    }
+  }, [router, handleStreamSearch]);
+
   const isHentai = (genres: string[]): boolean => {
     return genres.includes('Hentai');
   };
@@ -234,6 +313,16 @@ const AnimeDetails = () => {
     }
     setIsFav(!isFav);
   };
+
+
+  const renderEpisodeItem: ListRenderItem<CommonEpisode> = useCallback(({ item, index }) => (
+    <TouchableOpacity onPress={() => handleEpisodePress(item)}>
+      <Text style={[styles.episodeText, { color: currentTheme.textColor }]}>
+        {item.episodeNumber ? `Episode ${item.episodeNumber}: ` : `Episode ${index + 1}: `}{item.title}
+        {item.japanese_title && ` (${item.japanese_title})`}
+      </Text>
+    </TouchableOpacity>
+  ), [currentTheme.textColor, handleEpisodePress]);
 
   if (loading) {
     return (
@@ -312,25 +401,20 @@ const AnimeDetails = () => {
           </Text>
         )}
 
-        <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Episodes</Text>
-        {loadingEpisodes ? (
-          <ActivityIndicator size="small" color={currentTheme.textColor} />
-        ) : noEpisodesFound ? (
-          <Text style={[styles.noEpisodesText, { color: currentTheme.textColor }]}>
-            No episodes found for this content.
-          </Text>
-        ) : (
-          <FlatList
-            data={episodeList}
-            keyExtractor={(episode, index) => episode.id || index.toString()}
-            renderItem={({ item, index }) => (
-              <Text style={[styles.episodeText, { color: currentTheme.textColor }]}>
-                {item.episodeNumber ? `Episode ${item.episodeNumber}: ` : `Episode ${index + 1}: `}{item.title}
-                {item.japanese_title && ` (${item.japanese_title})`}
-              </Text>
-            )}
-          />
-        )}
+<Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Episodes</Text>
+      {loadingEpisodes ? (
+        <ActivityIndicator size="small" color={currentTheme.textColor} />
+      ) : noEpisodesFound ? (
+        <Text style={[styles.noEpisodesText, { color: currentTheme.textColor }]}>
+          No episodes found for this content.
+        </Text>
+      ) : (
+        <FlatList<CommonEpisode>
+  data={episodeList}
+  keyExtractor={(episode, index) => episode.id || index.toString()}
+  renderItem={renderEpisodeItem}
+/>
+      )}
       </View>
     </ScrollView>
   );
