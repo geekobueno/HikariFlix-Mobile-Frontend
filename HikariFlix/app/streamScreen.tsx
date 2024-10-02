@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
+import { Video, AVPlaybackStatus, ResizeMode, AVPlaybackSource } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 
@@ -21,6 +21,33 @@ interface LocalSearchParams {
   episodeTitle: string;
   streamingInfo: string;
 }
+
+const parseHLSFile = async (hlsUrl: string | null) => {
+  if (hlsUrl) {
+    const response = await fetch(hlsUrl);
+    const playlistText = await response.text();
+  
+    const streams = [];
+    const lines = playlistText.split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('#EXT-X-STREAM-INF')) {
+        // Extract RESOLUTION and the URL of the variant stream
+        const resolutionMatch = lines[i].match(/RESOLUTION=(\d+x\d+)/);
+        const bandwidthMatch = lines[i].match(/BANDWIDTH=(\d+)/);
+        
+        if (resolutionMatch && bandwidthMatch) {
+          streams.push({
+            resolution: resolutionMatch[1],  // e.g., 1920x1080
+            bandwidth: bandwidthMatch[1],   // e.g., 1835388
+            url: lines[i + 1],  // URL is on the next line
+          });
+        }
+      }
+    }
+    return streams; 
+  }
+};
 
 // Type guard to check if the object matches LocalSearchParams
 const isLocalSearchParams = (params: any): params is LocalSearchParams => {
@@ -44,6 +71,9 @@ const StreamScreen: React.FC = () => {
   const [currentSource, setCurrentSource] = useState<StreamingInfo['value']['decryptionResult']['source'] | null>(null);
   const [currentType, setCurrentType] = useState<'sub' | 'dub'>('sub');
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<string | null>(null);
+  const [qualityOptions, setQualityOptions] = useState<any[]>([]) ; // To store parsed quality options
+  const [isManualQuality, setIsManualQuality] = useState(false);  // Flag for manual quality switching
+  const [selectedQuality, setSelectedQuality] = useState<string | null>(null); // To store the selected quality
   const videoRef = useRef<Video>(null);
 
   // Parse the streamingInfo safely
@@ -57,6 +87,14 @@ const StreamScreen: React.FC = () => {
         setCurrentType('sub');
       }
     }
+    const loadQualities = async () => {
+      const streams = await parseHLSFile(currentSource? currentSource.sources[0].file : null);
+      if (streams) {
+        setQualityOptions(streams);
+        setSelectedQuality('auto');  // Default to adaptive
+      }
+    };
+    loadQualities();
   }, [parsedStreamingInfo]);
 
   const handleTypeChange = (type: 'sub' | 'dub') => {
@@ -65,6 +103,15 @@ const StreamScreen: React.FC = () => {
       setCurrentSource(newSource.value.decryptionResult.source);
       setCurrentType(type);
       setSelectedSubtitleTrack(null); // Reset subtitle when changing type
+    }
+  };
+
+  const handleQualityChange = (qualityUrl: string) => {
+    setSelectedQuality(qualityUrl);
+    setIsManualQuality(qualityUrl !== 'auto');  // Set manual mode if not 'auto'
+    
+    if (videoRef.current) {
+      videoRef.current.setStatusAsync({ shouldPlay: false }); // Pause video while switching
     }
   };
 
@@ -77,6 +124,19 @@ const StreamScreen: React.FC = () => {
     }
   };
 
+  const getVideoSource = () => {
+    // If user has manually selected a quality, use that specific quality URL
+    if (isManualQuality && selectedQuality !== 'auto') {
+      return { uri: selectedQuality };
+    }
+    // Otherwise, return the adaptive streaming (default master HLS playlist URL)
+    return { uri: currentSource?.sources[0].file };
+  };
+
+  if (!selectedQuality) {
+    return <Text>Loading...</Text>;
+  }
+
   if (!currentSource) {
     return <Text>Loading...</Text>;
   }
@@ -87,7 +147,7 @@ const StreamScreen: React.FC = () => {
       
       <Video
   ref={videoRef}
-  source={{ uri: currentSource?.sources[0]?.file }}
+  source={getVideoSource() as AVPlaybackSource} // Ensure the type is correct
   rate={1.0}
   volume={1.0}
   isMuted={false}
