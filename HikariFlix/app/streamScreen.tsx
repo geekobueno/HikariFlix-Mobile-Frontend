@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native'; // Add this import
 import { Video, AVPlaybackStatus, ResizeMode, AVPlaybackSource } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native'; // Added import for navigation
+import { useTheme } from '../constants/theme'; // Import the useTheme hook
 
 interface StreamingInfo {
   status: string;
@@ -50,25 +51,32 @@ const parseHLSFile = async (hlsUrl: string | null) => {
   }
 };
 
-
-const StreamScreen: React.FC = () => {
-    // Type guard to check if the object matches LocalSearchParams
-const isLocalSearchParams = useCallback((params: any): params is LocalSearchParams => {
+const isLocalSearchParams = (params: any): params is LocalSearchParams => {
   return (
     typeof params === 'object' &&
     params !== null &&
     'episodeTitle' in params &&
     'streamingInfo' in params
   );
-}, []);
+};
+
+const StreamScreen: React.FC = () => {
+  const theme = useTheme(); // Get the current theme
+
   const params = useLocalSearchParams();
   const navigation = useNavigation();
 
-  if (!isLocalSearchParams(params)) {
-    return <Text>Error: Invalid search parameters.</Text>;
-  }
+  const { episodeTitle, streamingInfo } = useMemo(() => {
+    if (!isLocalSearchParams(params)) {
+      return { episodeTitle: '', streamingInfo: '[]' };
+    }
+    return params;
+  }, [params]);
+  
+  const parsedStreamingInfo: StreamingInfo[] = useMemo(() => 
+    streamingInfo ? JSON.parse(streamingInfo) : []
+  , [streamingInfo]);
 
-  const { episodeTitle, streamingInfo } = params;
   const [currentSource, setCurrentSource] = useState<StreamingInfo['value']['decryptionResult']['source'] | null>(null);
   const [currentType, setCurrentType] = useState<'sub' | 'dub'>('sub');
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<string | null>(null);
@@ -78,17 +86,16 @@ const isLocalSearchParams = useCallback((params: any): params is LocalSearchPara
   const videoRef = useRef<Video>(null);
   const [loading, setLoading] = useState(true);
 
-  const parsedStreamingInfo: StreamingInfo[] = streamingInfo ? JSON.parse(streamingInfo) : [];
-
   const loadQualities = useCallback(async (source: StreamingInfo['value']['decryptionResult']['source'] | null) => {
-    const streams = await parseHLSFile(source ? source.sources[0].file : null);
-    if (streams) {
-      setQualityOptions(streams);
-      setSelectedQuality('auto');
+    if (source) {
+      const streams = await parseHLSFile(source.sources[0].file);
+      if (streams) {
+        setQualityOptions(streams);
+        setSelectedQuality('auto');
+      }
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
-
 
   useEffect(() => {
     if (parsedStreamingInfo?.length > 0) {
@@ -104,7 +111,7 @@ const isLocalSearchParams = useCallback((params: any): params is LocalSearchPara
   useLayoutEffect(() => {
     navigation.setOptions({ title: 'Stream' });
   }, [navigation]);
-
+  
   const handleTypeChange = useCallback((type: 'sub' | 'dub') => {
     const newSource = parsedStreamingInfo.find(info => info.value.decryptionResult.type === type);
     if (newSource) {
@@ -134,74 +141,75 @@ const isLocalSearchParams = useCallback((params: any): params is LocalSearchPara
   }, []);
 
   const getVideoSource = useCallback(() => {
-    if (isManualQuality && selectedQuality !== 'auto') {
+    if (isManualQuality && selectedQuality && selectedQuality !== 'auto') {
       return { uri: selectedQuality };
     }
-    return { uri: currentSource?.sources[0].file };
+    return currentSource?.sources[0] ? { uri: currentSource.sources[0].file } : null;
   }, [isManualQuality, selectedQuality, currentSource]);
+
+  if (!isLocalSearchParams(params)) {
+    return <Text>Error: Invalid search parameters.</Text>;
+  }
 
   if (loading) {
     return <ActivityIndicator size="large" color="#000000" />;
   }
 
-  if (!selectedQuality || !currentSource) {
-    return <ActivityIndicator size="large" color="#000000" />;
-  }
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{episodeTitle}</Text>
+    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      <Text style={[styles.title, { color: theme.textColor }]}>{episodeTitle}</Text>
       
-      <Video
-  ref={videoRef}
-  source={getVideoSource() as AVPlaybackSource} // Ensure the type is correct
-  rate={1.0}
-  volume={1.0}
-  isMuted={false}
-  resizeMode={ResizeMode.CONTAIN}  // Correctly using the constant here
-  shouldPlay
-  useNativeControls
-  style={styles.video}
-  onError={(error) => console.log('Video Error:', error)} // Handle video load error
-/>
-
+      {getVideoSource() && (
+        <Video
+          ref={videoRef}
+          source={getVideoSource() as AVPlaybackSource}
+          rate={1.0}
+          volume={1.0}
+          isMuted={false}
+          resizeMode={ResizeMode.CONTAIN}
+          shouldPlay
+          useNativeControls
+          style={[styles.video, { backgroundColor: 'black' }]} // Keep video background
+          onError={(error) => console.log('Video Error:', error)}
+        />
+      )}
 
       <View style={styles.controls}>
         <TouchableOpacity
           style={[styles.button, currentType === 'sub' && styles.activeButton]}
           onPress={() => handleTypeChange('sub')}
         >
-          <Text style={styles.buttonText}>Subbed</Text>
+          <Text style={[styles.buttonText, { color: theme.textColor }]}>Subbed</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, currentType === 'dub' && styles.activeButton]}
           onPress={() => handleTypeChange('dub')}
         >
-          <Text style={styles.buttonText}>Dubbed</Text>
+          <Text style={[styles.buttonText, { color: theme.textColor }]}>Dubbed</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.opContainer}>
-        <Text style={styles.label}>Select Quality:</Text>
+        <Text style={[styles.label, { color: theme.textColor }]}>Select Quality:</Text>
         <Picker
-          selectedValue={selectedQuality}
+          selectedValue={selectedQuality || ''}
           onValueChange={handleQualityChange}
-          style={styles.picker}
+          style={[styles.picker, { backgroundColor: theme.primaryColor }]} // Apply theme color
         >
-          <Picker.Item label="Auto" value="auto" /> {/* Auto option to let HLS handle quality */}
+          <Picker.Item label="Auto" value="auto" />
           {qualityOptions.map((option, index) => (
             <Picker.Item key={index} label={`${option.resolution} (${option.bandwidth}bps)`} value={option.url} />
           ))}
         </Picker>
       </View>
 
-      {currentSource.tracks && currentSource.tracks.length > 0 && (
+      {currentSource?.tracks && currentSource.tracks.length > 0 && (
         <View style={styles.opContainer}>
-          <Text style={styles.label}>Subtitles:</Text>
+          <Text style={[styles.label, { color: theme.textColor }]}>Subtitles:</Text>
           <Picker
             selectedValue={selectedSubtitleTrack}
             onValueChange={(itemValue: string | null) => handleSubtitleChange(itemValue)}
-            style={styles.picker}
+            style={[styles.picker, { backgroundColor: theme.primaryColor }]} // Apply theme color
           >
             <Picker.Item label="None" value={null} />
             {currentSource.tracks.map((track, index) => (
