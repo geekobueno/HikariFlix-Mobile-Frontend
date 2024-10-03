@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useEffect, useState, useCallback } from 'react';
+import React, { useLayoutEffect, useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, FlatList, ListRenderItem } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useTheme } from '../constants/theme';
@@ -154,14 +154,19 @@ const AnimeDetails = () => {
     variables: { id: Number(animeId) },
   });
 
+
   const currentTheme = useTheme();
   const navigation = useNavigation();
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
 
-  const [isFav, setIsFav] = useState(false);
   const [episodeList, setEpisodeList] = useState<CommonEpisode[]>([]);
   const [noEpisodesFound, setNoEpisodesFound] = useState(false);
   const [loadingEpisodes, setLoadingEpisodes] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false); // Add a state for navigation loading
+
+  const isFav = useMemo(() => {
+    return data && data.Media ? isFavorite(data.Media.id) : false;
+  }, [data, isFavorite]);
 
   useLayoutEffect(() => {
     if (data && data.Media) {
@@ -173,8 +178,6 @@ const AnimeDetails = () => {
 
   useEffect(() => {
     if (data && data.Media) {
-      setIsFav(isFavorite(data.Media.id));
-      
       if (isHentai(data.Media.genres)) {
         handleHentaiSearch(data.Media.title.romaji).then(() => {
           if (noEpisodesFound) {
@@ -185,7 +188,7 @@ const AnimeDetails = () => {
         handleAnimeSearch(data.Media.title.english);
       }
     }
-  }, [data, isFavorite]);
+  }, [data]);
 
   const handleHentaiSearch = useCallback(async (title: string | null) => {
     if (!title) return;
@@ -236,7 +239,7 @@ const AnimeDetails = () => {
       setNoEpisodesFound(true);
       setLoadingEpisodes(false);
     }
-  }, []);
+  }, [data]);
 
   const handleAnimeSearch = useCallback(async (englishTitle: string | null) => {
     if (!englishTitle) return;
@@ -273,7 +276,7 @@ const AnimeDetails = () => {
       setNoEpisodesFound(true);
       setLoadingEpisodes(false);
     }
-  }, []);
+  }, [data]);
 
   const handleStreamSearch = useCallback(async (episodeId: string) => {
     try {
@@ -283,9 +286,10 @@ const AnimeDetails = () => {
       console.log(error);
       return null;
     }
-  }, []);
+  }, [handleAnimeSearch]);
 
   const handleEpisodePress = useCallback(async (episode: CommonEpisode) => {
+    setIsNavigating(true); // Set navigation loading state
     const streamingInfo = await handleStreamSearch(episode.id);
     if (streamingInfo) {
       router.push({
@@ -299,32 +303,52 @@ const AnimeDetails = () => {
       // Handle the case when streaming info is not available
       console.log("Streaming info not available for this episode");
     }
+    setIsNavigating(false); // Reset navigation loading state after operation
   }, [router, handleStreamSearch]);
 
   const isHentai = (genres: string[]): boolean => {
     return genres.includes('Hentai');
   };
 
-  const handleFavoriteToggle = () => {
-    if (isFav) {
-      removeFavorite(data.Media.id);
-    } else {
-      addFavorite(data.Media);
+  const handleFavoriteToggle = useCallback(() => {
+    if (data && data.Media) {
+      if (isFav) {
+        removeFavorite(data.Media.id);
+      } else {
+        addFavorite(data.Media);
+      }
     }
-    setIsFav(!isFav);
-  };
+  }, [data, isFav, addFavorite, removeFavorite]);
 
 
   const renderEpisodeItem: ListRenderItem<CommonEpisode> = useCallback(({ item, index }) => (
-    <TouchableOpacity onPress={() => handleEpisodePress(item)}>
-      <Text style={[styles.episodeText, { color: currentTheme.textColor }]}>
-        {item.episodeNumber ? `Episode ${item.episodeNumber}: ` : `Episode ${index + 1}: `}{item.title}
-        {item.japanese_title && ` (${item.japanese_title})`}
-      </Text>
+    <TouchableOpacity 
+      onPress={() => handleEpisodePress(item)}
+      style={[
+        styles.episodeItem, 
+        { backgroundColor: currentTheme.backgroundColor }
+      ]}
+    >
+      <View style={styles.episodeContent}>
+        <Text style={[styles.episodeNumber, { color: currentTheme.primaryColor }]}>
+          {item.episodeNumber || `${index + 1}`}
+        </Text>
+        <View style={styles.episodeTitleContainer}>
+          <Text style={[styles.episodeTitle, { color: currentTheme.textColor }]} numberOfLines={2}>
+            {item.title}
+          </Text>
+          {item.japanese_title && (
+            <Text style={[styles.japaneseTitle, { color: currentTheme.textColor }]} numberOfLines={1}>
+              {item.japanese_title}
+            </Text>
+          )}
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={24} color={currentTheme.primaryColor} />
     </TouchableOpacity>
-  ), [currentTheme.textColor, handleEpisodePress]);
+  ), [currentTheme, handleEpisodePress]);
 
-  if (loading) {
+  if (loading || isNavigating) { // Show loading if either is true
     return (
       <View style={[styles.loadingContainer, { backgroundColor: currentTheme.backgroundColor }]}>
         <ActivityIndicator size="large" color={currentTheme.textColor} />
@@ -403,17 +427,18 @@ const AnimeDetails = () => {
 
 <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Episodes</Text>
       {loadingEpisodes ? (
-        <ActivityIndicator size="small" color={currentTheme.textColor} />
+        <ActivityIndicator size="small" color={currentTheme.primaryColor} />
       ) : noEpisodesFound ? (
         <Text style={[styles.noEpisodesText, { color: currentTheme.textColor }]}>
           No episodes found for this content.
         </Text>
       ) : (
         <FlatList<CommonEpisode>
-  data={episodeList}
-  keyExtractor={(episode, index) => episode.id || index.toString()}
-  renderItem={renderEpisodeItem}
-/>
+          data={episodeList}
+          keyExtractor={(episode, index) => episode.id || index.toString()}
+          renderItem={renderEpisodeItem}
+          contentContainerStyle={styles.episodeList}
+        />
       )}
       </View>
     </ScrollView>
@@ -498,11 +523,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 5,
   },
+  episodeList: {
+    paddingHorizontal: 20,
+  },
+  episodeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 10,
+    elevation: 2, // for Android shadow
+    shadowColor: '#000', // for iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  episodeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  episodeNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 12,
+    minWidth: 30,
+  },
+  episodeTitleContainer: {
+    flex: 1,
+  },
+  episodeTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  japaneseTitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
   noEpisodesText: {
     fontSize: 16,
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 10,
+    marginBottom: 20,
   },
 });
 

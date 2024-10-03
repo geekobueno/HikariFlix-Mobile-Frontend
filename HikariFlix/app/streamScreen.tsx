@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native'; // Add this import
 import { Video, AVPlaybackStatus, ResizeMode, AVPlaybackSource } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
+import { useNavigation } from '@react-navigation/native'; // Added import for navigation
 
 interface StreamingInfo {
   status: string;
@@ -49,20 +50,20 @@ const parseHLSFile = async (hlsUrl: string | null) => {
   }
 };
 
-// Type guard to check if the object matches LocalSearchParams
-const isLocalSearchParams = (params: any): params is LocalSearchParams => {
+
+const StreamScreen: React.FC = () => {
+    // Type guard to check if the object matches LocalSearchParams
+const isLocalSearchParams = useCallback((params: any): params is LocalSearchParams => {
   return (
     typeof params === 'object' &&
     params !== null &&
     'episodeTitle' in params &&
     'streamingInfo' in params
   );
-};
-
-const StreamScreen: React.FC = () => {
+}, []);
   const params = useLocalSearchParams();
+  const navigation = useNavigation();
 
-  // Use type guard to ensure the params are of type LocalSearchParams
   if (!isLocalSearchParams(params)) {
     return <Text>Error: Invalid search parameters.</Text>;
   }
@@ -71,13 +72,23 @@ const StreamScreen: React.FC = () => {
   const [currentSource, setCurrentSource] = useState<StreamingInfo['value']['decryptionResult']['source'] | null>(null);
   const [currentType, setCurrentType] = useState<'sub' | 'dub'>('sub');
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<string | null>(null);
-  const [qualityOptions, setQualityOptions] = useState<any[]>([]) ; // To store parsed quality options
-  const [isManualQuality, setIsManualQuality] = useState(false);  // Flag for manual quality switching
-  const [selectedQuality, setSelectedQuality] = useState<string | null>(null); // To store the selected quality
+  const [qualityOptions, setQualityOptions] = useState<any[]>([]);
+  const [isManualQuality, setIsManualQuality] = useState(false);
+  const [selectedQuality, setSelectedQuality] = useState<string | null>(null);
   const videoRef = useRef<Video>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Parse the streamingInfo safely
   const parsedStreamingInfo: StreamingInfo[] = streamingInfo ? JSON.parse(streamingInfo) : [];
+
+  const loadQualities = useCallback(async (source: StreamingInfo['value']['decryptionResult']['source'] | null) => {
+    const streams = await parseHLSFile(source ? source.sources[0].file : null);
+    if (streams) {
+      setQualityOptions(streams);
+      setSelectedQuality('auto');
+    }
+    setLoading(false);
+  }, []);
+
 
   useEffect(() => {
     if (parsedStreamingInfo?.length > 0) {
@@ -85,60 +96,56 @@ const StreamScreen: React.FC = () => {
       if (defaultSource) {
         setCurrentSource(defaultSource.value.decryptionResult.source);
         setCurrentType('sub');
+        loadQualities(defaultSource.value.decryptionResult.source);
       }
     }
-    const loadQualities = async () => {
-      const streams = await parseHLSFile(currentSource? currentSource.sources[0].file : null);
-      if (streams) {
-        setQualityOptions(streams);
-        setSelectedQuality('auto');  // Default to adaptive
-      }
-    };
-    loadQualities();
-  }, [parsedStreamingInfo]);
+  }, [parsedStreamingInfo, loadQualities]);
 
-  const handleTypeChange = (type: 'sub' | 'dub') => {
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: 'Stream' });
+  }, [navigation]);
+
+  const handleTypeChange = useCallback((type: 'sub' | 'dub') => {
     const newSource = parsedStreamingInfo.find(info => info.value.decryptionResult.type === type);
     if (newSource) {
       setCurrentSource(newSource.value.decryptionResult.source);
       setCurrentType(type);
-      setSelectedSubtitleTrack(null); // Reset subtitle when changing type
+      setSelectedSubtitleTrack(null);
+      loadQualities(newSource.value.decryptionResult.source);
     }
-  };
+  }, [parsedStreamingInfo, loadQualities]);
 
-  const handleQualityChange = (qualityUrl: string) => {
+  const handleQualityChange = useCallback((qualityUrl: string) => {
     setSelectedQuality(qualityUrl);
-    setIsManualQuality(qualityUrl !== 'auto');  // Set manual mode if not 'auto'
+    setIsManualQuality(qualityUrl !== 'auto');
     
     if (videoRef.current) {
-      videoRef.current.setStatusAsync({ shouldPlay: false }); // Pause video while switching
+      videoRef.current.setStatusAsync({ shouldPlay: false });
     }
-  };
+  }, []);
 
-  const handleSubtitleChange = (trackUri: string | null) => {
+  const handleSubtitleChange = useCallback((trackUri: string | null) => {
     setSelectedSubtitleTrack(trackUri);
     if (videoRef.current) {
       videoRef.current.setStatusAsync({
         textTracks: trackUri ? [{ uri: trackUri, type: 'vtt', language: 'en' }] : undefined,
       } as Partial<AVPlaybackStatus>);
     }
-  };
+  }, []);
 
-  const getVideoSource = () => {
-    // If user has manually selected a quality, use that specific quality URL
+  const getVideoSource = useCallback(() => {
     if (isManualQuality && selectedQuality !== 'auto') {
       return { uri: selectedQuality };
     }
-    // Otherwise, return the adaptive streaming (default master HLS playlist URL)
     return { uri: currentSource?.sources[0].file };
-  };
+  }, [isManualQuality, selectedQuality, currentSource]);
 
-  if (!selectedQuality) {
-    return <Text>Loading...</Text>;
+  if (loading) {
+    return <ActivityIndicator size="large" color="#000000" />;
   }
 
-  if (!currentSource) {
-    return <Text>Loading...</Text>;
+  if (!selectedQuality || !currentSource) {
+    return <ActivityIndicator size="large" color="#000000" />;
   }
 
   return (
@@ -174,9 +181,23 @@ const StreamScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.opContainer}>
+        <Text style={styles.label}>Select Quality:</Text>
+        <Picker
+          selectedValue={selectedQuality}
+          onValueChange={handleQualityChange}
+          style={styles.picker}
+        >
+          <Picker.Item label="Auto" value="auto" /> {/* Auto option to let HLS handle quality */}
+          {qualityOptions.map((option, index) => (
+            <Picker.Item key={index} label={`${option.resolution} (${option.bandwidth}bps)`} value={option.url} />
+          ))}
+        </Picker>
+      </View>
+
       {currentSource.tracks && currentSource.tracks.length > 0 && (
-        <View style={styles.subtitleContainer}>
-          <Text style={styles.subtitleLabel}>Subtitles:</Text>
+        <View style={styles.opContainer}>
+          <Text style={styles.label}>Subtitles:</Text>
           <Picker
             selectedValue={selectedSubtitleTrack}
             onValueChange={(itemValue: string | null) => handleSubtitleChange(itemValue)}
@@ -225,10 +246,10 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
   },
-  subtitleContainer: {
+  opContainer: {
     marginTop: 20,
   },
-  subtitleLabel: {
+  label: {
     fontSize: 16,
     marginBottom: 10,
   },

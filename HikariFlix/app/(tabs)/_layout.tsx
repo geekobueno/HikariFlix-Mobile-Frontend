@@ -43,7 +43,7 @@ export default function TabLayout() {
         name="favorites"
         options={{
           title: '',
-          tabBarIcon: ({ color }) => <FontAwesome size={28} name="heart" color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome size={25} name="heart" color={color} />,
         }}
       /> 
     </Tabs>
