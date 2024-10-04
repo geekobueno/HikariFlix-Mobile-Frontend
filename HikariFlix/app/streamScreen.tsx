@@ -155,6 +155,7 @@ const StreamScreen: React.FC = () => {
     return <ActivityIndicator size="large" color="#000000" />;
   }
 
+  console.log('Video Source:', getVideoSource());
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <Text style={[styles.title, { color: theme.textColor }]}>{episodeTitle}</Text>

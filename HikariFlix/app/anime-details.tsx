@@ -185,7 +185,7 @@ const AnimeDetails = () => {
           }
         });
       } else {
-        handleAnimeSearch(data.Media.title.english);
+        handleAnimeSearch(data.Media.title.english, data.Media.episodes)
       }
     }
   }, [data]);
@@ -241,13 +241,13 @@ const AnimeDetails = () => {
     }
   }, [data]);
 
-  const handleAnimeSearch = useCallback(async (englishTitle: string | null) => {
+  const handleAnimeSearch = useCallback(async (englishTitle: string | null, ep: string) => {
     if (!englishTitle) return;
   
     const sanitizedKeyword = encodeURIComponent(englishTitle.replace(/[^\w\s]/gi, ' ')).replace(/%3A/g, ':');
   
     try {
-      const searchResult: AnimeResponse = await searchAnime(sanitizedKeyword);
+      const searchResult: AnimeResponse = await searchAnime(sanitizedKeyword,ep);
   
       if (!searchResult.success) {
         setNoEpisodesFound(true);

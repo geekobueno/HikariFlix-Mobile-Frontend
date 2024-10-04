@@ -2,9 +2,9 @@ import axios from 'axios';
 
 const BASE_URL = 'http://127.0.0.1:6969';
 
-export const searchAnime = async (keyword: string) => {
+export const searchAnime = async (keyword: string, ep: string) => {
   try {
-    const response = await axios.get(`${BASE_URL}/a/search?keyword=${keyword}`);
+    const response = await axios.get(`${BASE_URL}/a/search?keyword=${keyword}?ep=${ep}`);
     return response.data; // Assuming the response has the anime data you need
   } catch (error) {
     if (axios.isAxiosError(error)) {
