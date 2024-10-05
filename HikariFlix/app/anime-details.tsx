@@ -272,9 +272,36 @@ const AnimeDetails = () => {
         console.log(`Anime match found: ${animeData.title}`);
       }
     } catch (animeError) {
-      console.error('Anime fetch failed:', animeError);
-      setNoEpisodesFound(true);
-      setLoadingEpisodes(false);
+      try {
+        const searchResult: AnimeResponse = await searchAnime(sanitizedKeyword,'0');
+    
+        if (!searchResult.success) {
+          setNoEpisodesFound(true);
+          setLoadingEpisodes(false);
+          console.log("Anime search failed.");
+        } else {
+          const animeData = searchResult.result;
+          const episodesResponse: EpisodeResponse = await fetchEpisodes(animeData.id);
+    
+          if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
+            const episodes: CommonEpisode[] = episodesResponse.results.map((episode) => ({
+              id: episode.id,
+              title: episode.title,
+              episodeNumber: episode.episode_no || episode.number,
+            }));
+            setEpisodeList(episodes);
+            setNoEpisodesFound(false);
+          } else {
+            setNoEpisodesFound(true);
+          }
+          setLoadingEpisodes(false);
+          console.log(`Anime match found: ${animeData.title}`);
+        }
+      } catch (animeError) {
+        console.error('Anime fetch failed:', animeError);
+        setNoEpisodesFound(true);
+        setLoadingEpisodes(false);
+      }
     }
   }, [data]);
 

@@ -61,8 +61,7 @@ const isLocalSearchParams = (params: any): params is LocalSearchParams => {
 };
 
 const StreamScreen: React.FC = () => {
-  const theme = useTheme(); // Get the current theme
-
+  const theme = useTheme();
   const params = useLocalSearchParams();
   const navigation = useNavigation();
 
@@ -78,33 +77,39 @@ const StreamScreen: React.FC = () => {
   , [streamingInfo]);
 
   const [currentSource, setCurrentSource] = useState<StreamingInfo['value']['decryptionResult']['source'] | null>(null);
-  const [currentType, setCurrentType] = useState<'sub' | 'dub'>('sub');
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<string | null>(null);
   const [qualityOptions, setQualityOptions] = useState<any[]>([]);
   const [isManualQuality, setIsManualQuality] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string>('');
   const videoRef = useRef<Video>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadQualities = useCallback(async (source: StreamingInfo['value']['decryptionResult']['source'] | null) => {
     if (source) {
-      const streams = await parseHLSFile(source.sources[0].file);
-      if (streams) {
-        setQualityOptions(streams);
-        setSelectedQuality('auto');
+      try {
+        const streams = await parseHLSFile(source.sources[0].file);
+        if (streams) {
+          setQualityOptions(streams);
+          setSelectedQuality('auto');
+        }
+        setLoading(false);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading qualities:', err);
+        setError('Failed to load video qualities. Please try another option.');
+        setLoading(false);
       }
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (parsedStreamingInfo?.length > 0) {
-      const defaultSource = parsedStreamingInfo.find(info => info.value.decryptionResult.type === 'sub');
-      if (defaultSource) {
-        setCurrentSource(defaultSource.value.decryptionResult.source);
-        setCurrentType('sub');
-        loadQualities(defaultSource.value.decryptionResult.source);
-      }
+      const defaultSource = parsedStreamingInfo[0].value.decryptionResult;
+      setCurrentSource(defaultSource.source);
+      setSelectedOption(`${defaultSource.type}-0`);
+      loadQualities(defaultSource.source);
     }
   }, [parsedStreamingInfo, loadQualities]);
 
@@ -112,19 +117,21 @@ const StreamScreen: React.FC = () => {
     navigation.setOptions({ title: 'Stream' });
   }, [navigation]);
   
-  const handleTypeChange = useCallback((type: 'sub' | 'dub') => {
-    const newSource = parsedStreamingInfo.find(info => info.value.decryptionResult.type === type);
-    if (newSource) {
-      setCurrentSource(newSource.value.decryptionResult.source);
-      setCurrentType(type);
-      setSelectedSubtitleTrack(null);
-      loadQualities(newSource.value.decryptionResult.source);
-    }
+  const handleOptionChange = useCallback((optionValue: string) => {
+    const [type, index] = optionValue.split('-');
+    const newSource = parsedStreamingInfo[parseInt(index)].value.decryptionResult;
+    setCurrentSource(newSource.source);
+    setSelectedOption(optionValue);
+    setSelectedSubtitleTrack(null);
+    setLoading(true);
+    setError(null);
+    loadQualities(newSource.source);
   }, [parsedStreamingInfo, loadQualities]);
 
   const handleQualityChange = useCallback((qualityUrl: string) => {
     setSelectedQuality(qualityUrl);
     setIsManualQuality(qualityUrl !== 'auto');
+    setError(null);
     
     if (videoRef.current) {
       videoRef.current.setStatusAsync({ shouldPlay: false });
@@ -147,20 +154,25 @@ const StreamScreen: React.FC = () => {
     return currentSource?.sources[0] ? { uri: currentSource.sources[0].file } : null;
   }, [isManualQuality, selectedQuality, currentSource]);
 
+  const handleVideoError = useCallback((error: string) => {
+    console.error('Video Error:', error);
+    setError('This link is not working. Please try another option.');
+    alert('Video Error This link is not working. Please try another option.');
+  }, []);
+
   if (!isLocalSearchParams(params)) {
     return <Text>Error: Invalid search parameters.</Text>;
   }
 
-  if (loading) {
-    return <ActivityIndicator size="large" color="#000000" />;
-  }
-
-  console.log('Video Source:', getVideoSource());
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <Text style={[styles.title, { color: theme.textColor }]}>{episodeTitle}</Text>
       
-      {getVideoSource() && (
+      {loading ? (
+        <ActivityIndicator size="large" color="#000000" />
+      ) : error ? (
+        <Text style={[styles.errorText, { color: theme.textColor }]}>{error}</Text>
+      ) : getVideoSource() ? (
         <Video
           ref={videoRef}
           source={getVideoSource() as AVPlaybackSource}
@@ -170,24 +182,26 @@ const StreamScreen: React.FC = () => {
           resizeMode={ResizeMode.CONTAIN}
           shouldPlay
           useNativeControls
-          style={[styles.video, { backgroundColor: 'black' }]} // Keep video background
-          onError={(error) => console.log('Video Error:', error)}
+          style={[styles.video, { backgroundColor: 'black' }]}
+          onError={(error) => handleVideoError(error)}
         />
-      )}
+      ) : null}
 
-      <View style={styles.controls}>
-        <TouchableOpacity
-          style={[styles.button, currentType === 'sub' && styles.activeButton]}
-          onPress={() => handleTypeChange('sub')}
+      <View style={styles.opContainer}>
+        <Text style={[styles.label, { color: theme.textColor }]}>Select Version:</Text>
+        <Picker
+          selectedValue={selectedOption}
+          onValueChange={handleOptionChange}
+          style={[styles.picker, { backgroundColor: theme.primaryColor }]}
         >
-          <Text style={[styles.buttonText, { color: theme.textColor }]}>Subbed</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, currentType === 'dub' && styles.activeButton]}
-          onPress={() => handleTypeChange('dub')}
-        >
-          <Text style={[styles.buttonText, { color: theme.textColor }]}>Dubbed</Text>
-        </TouchableOpacity>
+          {parsedStreamingInfo.map((info, index) => (
+            <Picker.Item 
+              key={`${info.value.decryptionResult.type}-${index}`}
+              label={`${info.value.decryptionResult.type === 'sub' ? 'Subbed' : 'Dubbed'} - Option ${index + 1}`}
+              value={`${info.value.decryptionResult.type}-${index}`}
+            />
+          ))}
+        </Picker>
       </View>
 
       <View style={styles.opContainer}>
@@ -195,7 +209,7 @@ const StreamScreen: React.FC = () => {
         <Picker
           selectedValue={selectedQuality || ''}
           onValueChange={handleQualityChange}
-          style={[styles.picker, { backgroundColor: theme.primaryColor }]} // Apply theme color
+          style={[styles.picker, { backgroundColor: theme.primaryColor }]}
         >
           <Picker.Item label="Auto" value="auto" />
           {qualityOptions.map((option, index) => (
@@ -210,7 +224,7 @@ const StreamScreen: React.FC = () => {
           <Picker
             selectedValue={selectedSubtitleTrack}
             onValueChange={(itemValue: string | null) => handleSubtitleChange(itemValue)}
-            style={[styles.picker, { backgroundColor: theme.primaryColor }]} // Apply theme color
+            style={[styles.picker, { backgroundColor: theme.primaryColor }]}
           >
             <Picker.Item label="None" value={null} />
             {currentSource.tracks.map((track, index) => (
@@ -224,6 +238,11 @@ const StreamScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginVertical: 20,
+  },
   container: {
     flex: 1,
     padding: 20,

@@ -6,10 +6,21 @@ import Trending from '../homescreen/trending';
 import Top100Anime from '../homescreen/top';
 import Featured from '../homescreen/featured';
 import { useTheme } from '../../constants/theme';
+import { useNavigation } from '@react-navigation/native';
+import { useLayoutEffect } from 'react';
+
 
 export default function HomeScreen() {
   const currentTheme = useTheme();
   const router = useRouter();
+
+  const navigation = useNavigation();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
 
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.backgroundColor }]}>

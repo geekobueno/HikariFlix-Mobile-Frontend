@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://127.0.0.1:6969';
+const BASE_URL = 'https://hikariflix.vercel.app';
 
 export const searchAnime = async (keyword: string, ep: string) => {
   try {
