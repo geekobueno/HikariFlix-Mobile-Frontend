@@ -1,8 +1,17 @@
 import React from 'react';
 import { View, Text, useColorScheme, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useLayoutEffect } from 'react';
 
 export default function Favorites() {
   const colorScheme = useColorScheme();
+  const navigation = useNavigation();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
 
   return (
     <View style={[
@@ -13,7 +22,7 @@ export default function Favorites() {
         styles.text,
         { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }
       ]}>
-        Your Downloads
+       Coming soon
       </Text>
     </View>
   );

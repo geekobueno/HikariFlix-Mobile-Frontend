@@ -85,7 +85,7 @@ const isLargeScreen = screenWidth > 768;
       <ActivityIndicator size="large" color={currentTheme.textColor} />
     </View>
   );
-  if (error) return <Text style={{ color: currentTheme.textColor }}>Error: {error.message}</Text>;
+  if (error) return <Text style={{ color: currentTheme.textColor }}>Server issue: Please try again later.</Text>;
 
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.backgroundColor }]}>

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native'; // Add this import
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native'; // Add this import
 import { Video, AVPlaybackStatus, ResizeMode, AVPlaybackSource } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
-import { Picker } from '@react-native-picker/picker';
+import RNPickerSelect from 'react-native-picker-select';
 import { useNavigation } from '@react-navigation/native'; // Added import for navigation
 import { useTheme } from '../constants/theme'; // Import the useTheme hook
 
@@ -24,33 +24,6 @@ interface LocalSearchParams {
   streamingInfo: string;
 }
 
-const parseHLSFile = async (hlsUrl: string | null) => {
-  if (hlsUrl) {
-    const response = await fetch(hlsUrl);
-    const playlistText = await response.text();
-  
-    const streams = [];
-    const lines = playlistText.split('\n');
-    
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith('#EXT-X-STREAM-INF')) {
-        // Extract RESOLUTION and the URL of the variant stream
-        const resolutionMatch = lines[i].match(/RESOLUTION=(\d+x\d+)/);
-        const bandwidthMatch = lines[i].match(/BANDWIDTH=(\d+)/);
-        
-        if (resolutionMatch && bandwidthMatch) {
-          streams.push({
-            resolution: resolutionMatch[1],  // e.g., 1920x1080
-            bandwidth: bandwidthMatch[1],   // e.g., 1835388
-            url: lines[i + 1],  // URL is on the next line
-          });
-        }
-      }
-    }
-    return streams; 
-  }
-};
-
 const isLocalSearchParams = (params: any): params is LocalSearchParams => {
   return (
     typeof params === 'object' &&
@@ -62,6 +35,28 @@ const isLocalSearchParams = (params: any): params is LocalSearchParams => {
 
 const StreamScreen: React.FC = () => {
   const theme = useTheme();
+  const pickerSelectStyles = StyleSheet.create({
+    inputIOS: {
+      fontSize: 16,
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+      borderWidth: 1,
+      borderColor: theme.primaryColor,
+      borderRadius: 4,
+      color: theme.textColor,
+      paddingRight: 30,
+    },
+    inputAndroid: {
+      fontSize: 16,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderWidth: 1,
+      borderColor: theme.primaryColor,
+      borderRadius: 8,
+      color: theme.textColor,
+      paddingRight: 30,
+    },
+  });
   const params = useLocalSearchParams();
   const navigation = useNavigation();
 
@@ -78,44 +73,26 @@ const StreamScreen: React.FC = () => {
 
   const [currentSource, setCurrentSource] = useState<StreamingInfo['value']['decryptionResult']['source'] | null>(null);
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<string | null>(null);
-  const [qualityOptions, setQualityOptions] = useState<any[]>([]);
-  const [isManualQuality, setIsManualQuality] = useState(false);
-  const [selectedQuality, setSelectedQuality] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>('');
   const videoRef = useRef<Video>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadQualities = useCallback(async (source: StreamingInfo['value']['decryptionResult']['source'] | null) => {
-    if (source) {
-      try {
-        const streams = await parseHLSFile(source.sources[0].file);
-        if (streams) {
-          setQualityOptions(streams);
-          setSelectedQuality('auto');
-        }
-        setLoading(false);
-        setError(null);
-      } catch (err) {
-        console.error('Error loading qualities:', err);
-        setError('Failed to load video qualities. Please try another option.');
-        setLoading(false);
-      }
-    }
-  }, []);
+
 
   useEffect(() => {
     if (parsedStreamingInfo?.length > 0) {
       const defaultSource = parsedStreamingInfo[0].value.decryptionResult;
       setCurrentSource(defaultSource.source);
       setSelectedOption(`${defaultSource.type}-0`);
-      loadQualities(defaultSource.source);
     }
-  }, [parsedStreamingInfo, loadQualities]);
+  }, [parsedStreamingInfo]);
 
   useLayoutEffect(() => {
-    navigation.setOptions({ title: 'Stream' });
-  }, [navigation]);
+    navigation.setOptions({ 
+      title: episodeTitle,
+    });
+  }, [navigation, episodeTitle]);
   
   const handleOptionChange = useCallback((optionValue: string) => {
     const [type, index] = optionValue.split('-');
@@ -125,18 +102,8 @@ const StreamScreen: React.FC = () => {
     setSelectedSubtitleTrack(null);
     setLoading(true);
     setError(null);
-    loadQualities(newSource.source);
-  }, [parsedStreamingInfo, loadQualities]);
+  }, [parsedStreamingInfo]);
 
-  const handleQualityChange = useCallback((qualityUrl: string) => {
-    setSelectedQuality(qualityUrl);
-    setIsManualQuality(qualityUrl !== 'auto');
-    setError(null);
-    
-    if (videoRef.current) {
-      videoRef.current.setStatusAsync({ shouldPlay: false });
-    }
-  }, []);
 
   const handleSubtitleChange = useCallback((trackUri: string | null) => {
     setSelectedSubtitleTrack(trackUri);
@@ -148,11 +115,8 @@ const StreamScreen: React.FC = () => {
   }, []);
 
   const getVideoSource = useCallback(() => {
-    if (isManualQuality && selectedQuality && selectedQuality !== 'auto') {
-      return { uri: selectedQuality };
-    }
     return currentSource?.sources[0] ? { uri: currentSource.sources[0].file } : null;
-  }, [isManualQuality, selectedQuality, currentSource]);
+  }, [ currentSource]);
 
   const handleVideoError = useCallback((error: string) => {
     console.error('Video Error:', error);
@@ -169,7 +133,7 @@ const StreamScreen: React.FC = () => {
       <Text style={[styles.title, { color: theme.textColor }]}>{episodeTitle}</Text>
       
       {loading ? (
-        <ActivityIndicator size="large" color="#000000" />
+        <ActivityIndicator size="large" color={theme.textColor} />
       ) : error ? (
         <Text style={[styles.errorText, { color: theme.textColor }]}>{error}</Text>
       ) : getVideoSource() ? (
@@ -189,48 +153,34 @@ const StreamScreen: React.FC = () => {
 
       <View style={styles.opContainer}>
         <Text style={[styles.label, { color: theme.textColor }]}>Select Version:</Text>
-        <Picker
-          selectedValue={selectedOption}
-          onValueChange={handleOptionChange}
-          style={[styles.picker, { backgroundColor: theme.primaryColor }]}
-        >
-          {parsedStreamingInfo.map((info, index) => (
-            <Picker.Item 
-              key={`${info.value.decryptionResult.type}-${index}`}
-              label={`${info.value.decryptionResult.type === 'sub' ? 'Subbed' : 'Dubbed'} - Option ${index + 1}`}
-              value={`${info.value.decryptionResult.type}-${index}`}
-            />
-          ))}
-        </Picker>
-      </View>
-
-      <View style={styles.opContainer}>
-        <Text style={[styles.label, { color: theme.textColor }]}>Select Quality:</Text>
-        <Picker
-          selectedValue={selectedQuality || ''}
-          onValueChange={handleQualityChange}
-          style={[styles.picker, { backgroundColor: theme.primaryColor }]}
-        >
-          <Picker.Item label="Auto" value="auto" />
-          {qualityOptions.map((option, index) => (
-            <Picker.Item key={index} label={`${option.resolution} (${option.bandwidth}bps)`} value={option.url} />
-          ))}
-        </Picker>
+        <RNPickerSelect
+  onValueChange={handleOptionChange}
+  items={parsedStreamingInfo.map((info, index) => ({
+    label: `${info.value.decryptionResult.type === 'sub' ? 'Subbed' : 'Dubbed'} - Option ${index + 1}`,
+    value: `${info.value.decryptionResult.type}-${index}`,
+  }))}
+  value={selectedOption}
+  style={pickerSelectStyles}
+  placeholder={{}}
+/>
       </View>
 
       {currentSource?.tracks && currentSource.tracks.length > 0 && (
         <View style={styles.opContainer}>
           <Text style={[styles.label, { color: theme.textColor }]}>Subtitles:</Text>
-          <Picker
-            selectedValue={selectedSubtitleTrack}
-            onValueChange={(itemValue: string | null) => handleSubtitleChange(itemValue)}
-            style={[styles.picker, { backgroundColor: theme.primaryColor }]}
-          >
-            <Picker.Item label="None" value={null} />
-            {currentSource.tracks.map((track, index) => (
-              <Picker.Item key={index} label={track.label} value={track.file} />
-            ))}
-          </Picker>
+          <RNPickerSelect
+  onValueChange={(itemValue: string | null) => handleSubtitleChange(itemValue)}
+  items={[
+    { label: 'None', value: null },
+    ...currentSource.tracks.map((track, index) => ({
+      label: track.label,
+      value: track.file,
+    })),
+  ]}
+  value={selectedSubtitleTrack}
+  style={pickerSelectStyles}
+  placeholder={{}}
+/>
         </View>
       )}
     </ScrollView>
@@ -286,5 +236,6 @@ const styles = StyleSheet.create({
     height: 50,
   },
 });
+
 
 export default StreamScreen;

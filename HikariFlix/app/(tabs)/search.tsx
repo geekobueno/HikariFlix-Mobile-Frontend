@@ -3,9 +3,18 @@ import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import AnimeSearch from '../searchScreen/AnimeSearch';
 import { ApolloProvider } from '@apollo/client';
 import client from '../../api/graphQL/apollo';
+import { useNavigation } from '@react-navigation/native';
+import { useLayoutEffect } from 'react';
 
 export default function SearchAnime() {
     const colorScheme = useColorScheme();
+    const navigation = useNavigation();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
 
     return (
         <ApolloProvider client={client}>

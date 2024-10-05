@@ -3,6 +3,8 @@ import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, Alert, Refre
 import { useTheme } from '../../constants/theme';
 import { useFavorites } from '../../controllers/favorite.controller';
 import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { useLayoutEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
 interface AnimeItem {
@@ -18,6 +20,14 @@ interface AnimeItem {
 }
 
 export default function Favorites() {
+  const navigation = useNavigation();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+  
   const currentTheme = useTheme();
   const { favorites, removeFavorite, loadFavorites } = useFavorites();
   const router = useRouter();
