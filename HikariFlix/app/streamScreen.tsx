@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native'; // Add this import
-import { Video, AVPlaybackStatus, ResizeMode, AVPlaybackSource } from 'expo-av';
+import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
 import RNPickerSelect from 'react-native-picker-select';
 import { useNavigation } from '@react-navigation/native'; // Added import for navigation
@@ -132,24 +132,22 @@ const StreamScreen: React.FC = () => {
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <Text style={[styles.title, { color: theme.textColor }]}>{episodeTitle}</Text>
       
-      {loading ? (
-        <ActivityIndicator size="large" color={theme.textColor} />
-      ) : error ? (
+      {error ? (
         <Text style={[styles.errorText, { color: theme.textColor }]}>{error}</Text>
-      ) : getVideoSource() ? (
+      ) : (
         <Video
           ref={videoRef}
-          source={getVideoSource() as AVPlaybackSource}
+          source={getVideoSource() || { uri: '' }} // Fallback to an empty URI
           rate={1.0}
           volume={1.0}
           isMuted={false}
           resizeMode={ResizeMode.CONTAIN}
-          shouldPlay
-          useNativeControls
+          shouldPlay={true}
+          useNativeControls={true}
           style={[styles.video, { backgroundColor: 'black' }]}
           onError={(error) => handleVideoError(error)}
         />
-      ) : null}
+      )}
 
       <View style={styles.opContainer}>
         <Text style={[styles.label, { color: theme.textColor }]}>Select Version:</Text>
