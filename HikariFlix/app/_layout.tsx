@@ -16,7 +16,7 @@ export default function RootLayout() {
           },
           headerTintColor: currentTheme.headerTextColor,
           headerShown: true,
-          headerBackVisible: false,
+          headerBackVisible: true,
         }}
       >
         <Stack.Screen 
@@ -29,42 +29,42 @@ export default function RootLayout() {
           name="category" 
           options={{ 
             title: 'Categories',
-            headerBackVisible: false, // Added to hide the back button
+            headerBackVisible: true, // Added to hide the back button
           }} 
         />
         <Stack.Screen 
           name="category-anime" 
           options={{ 
             title: 'Category Anime',
-            headerBackVisible: false, // Added to hide the back button
+            headerBackVisible: true, // Added to hide the back button
           }} 
         />
         <Stack.Screen 
           name="anime-details" 
           options={{ 
             title: 'Anime Details',
-            headerBackVisible: false, // Added to hide the back button
+            headerBackVisible: true, // Added to hide the back button
           }} 
         />
         <Stack.Screen 
           name="popularAll" 
           options={{ 
             title: 'All Popular Anime',
-            headerBackVisible: false, // Added to hide the back button
+            headerBackVisible: true, // Added to hide the back button
           }} 
         />
         <Stack.Screen 
           name="trendingAll" 
           options={{ 
             title: 'All Trending Anime',
-            headerBackVisible: false, // Added to hide the back button
+            headerBackVisible: true, // Added to hide the back button
           }} 
         />
         <Stack.Screen 
           name="topAll" 
           options={{ 
             title: 'Top Anime',
-            headerBackVisible: false, // Added to hide the back button
+            headerBackVisible: true, // Added to hide the back button
           }} 
         />
       </Stack>
