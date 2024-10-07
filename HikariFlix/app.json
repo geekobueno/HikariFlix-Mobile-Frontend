@@ -11,10 +11,6 @@
       "bundleIdentifier": "com.geekobueno.HikariFlix"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
       "package": "com.geekobueno.HikariFlix"
     },
     "web": {
