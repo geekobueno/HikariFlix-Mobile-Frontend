@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native'; // Add this import
+import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
 import RNPickerSelect from 'react-native-picker-select';
-import { useNavigation } from '@react-navigation/native'; // Added import for navigation
-import { useTheme } from '../constants/theme'; // Import the useTheme hook
+import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../constants/theme';
+import { WebVTTParser } from 'webvtt-parser';
+import RenderHTML from 'react-native-render-html'; 
+
 
 interface StreamingInfo {
   status: string;
@@ -57,6 +60,7 @@ const StreamScreen: React.FC = () => {
       paddingRight: 30,
     },
   });
+  
   const params = useLocalSearchParams();
   const navigation = useNavigation();
 
@@ -75,10 +79,12 @@ const StreamScreen: React.FC = () => {
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>('');
   const videoRef = useRef<Video>(null);
+  const [currentTime, setCurrentTime] = useState(0); // Track the current time
+  const [isFullScreen, setIsFullScreen] = useState(false); // Track full screen state
+  const [subtitleCues, setSubtitleCues] = useState<any[]>([]); // To store parsed subtitles
+  const [currentCue, setCurrentCue] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-
 
   useEffect(() => {
     if (parsedStreamingInfo?.length > 0) {
@@ -104,25 +110,48 @@ const StreamScreen: React.FC = () => {
     setError(null);
   }, [parsedStreamingInfo]);
 
-
   const handleSubtitleChange = useCallback((trackUri: string | null) => {
     setSelectedSubtitleTrack(trackUri);
-    if (videoRef.current) {
-      videoRef.current.setStatusAsync({
-        textTracks: trackUri ? [{ uri: trackUri, type: 'vtt', language: 'en' }] : undefined,
-      } as Partial<AVPlaybackStatus>);
+    if (trackUri) {
+      // Fetch and parse the subtitle file using WebVTT parser
+      fetch(trackUri)
+        .then((response) => response.text())
+        .then((vttText) => {
+          const parser = new WebVTTParser();
+          const parsedVTT = parser.parse(vttText);
+          const cues = parsedVTT.cues.map((cue: any) => ({
+            startTime: cue.startTime,
+            endTime: cue.endTime,
+            text: cue.text,
+          }));
+          setSubtitleCues(cues);
+        })
+        .catch((error) => console.error('Error fetching subtitles:', error));
     }
   }, []);
 
   const getVideoSource = useCallback(() => {
     return currentSource?.sources[0] ? { uri: currentSource.sources[0].file } : null;
-  }, [ currentSource]);
+  }, [currentSource]);
 
   const handleVideoError = useCallback((error: string) => {
     console.error('Video Error:', error);
     setError('This link is not working. Please try another option.');
     alert('Video Error This link is not working. Please try another option.');
   }, []);
+
+  const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
+    if (status.isLoaded && status.positionMillis !== undefined) {
+      const newTime = status.positionMillis / 1000; // Convert to seconds
+      setCurrentTime(newTime);
+
+      // Find the current cue based on current time
+      const currentCue = subtitleCues.find(
+        (cue) => newTime >= cue.startTime && newTime <= cue.endTime
+      );
+      setCurrentCue(currentCue ? currentCue.text : null);
+    }
+  }, [subtitleCues]);
 
   if (!isLocalSearchParams(params)) {
     return <Text>Error: Invalid search parameters.</Text>;
@@ -135,50 +164,61 @@ const StreamScreen: React.FC = () => {
       {error ? (
         <Text style={[styles.errorText, { color: theme.textColor }]}>{error}</Text>
       ) : (
-        <Video
-          ref={videoRef}
-          source={getVideoSource() || { uri: '' }} // Fallback to an empty URI
-          rate={1.0}
-          volume={1.0}
-          isMuted={false}
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay={true}
-          useNativeControls={true}
-          style={[styles.video, { backgroundColor: 'black' }]}
-          onError={(error) => handleVideoError(error)}
-        />
+        <View>
+          <Video
+            ref={videoRef}
+            source={getVideoSource() || { uri: '' }} // Fallback to an empty URI
+            rate={1.0}
+            volume={1.0}
+            isMuted={false}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay={true}
+            useNativeControls={true}
+            style={[styles.video, { backgroundColor: 'black' }]}
+            onError={handleVideoError}
+            onPlaybackStatusUpdate={onPlaybackStatusUpdate} // Track current playback status
+          />
+           {currentCue && (
+          <View style={[styles.subtitleContainer, isFullScreen && styles.fullscreenSubtitle]}>
+            <Text style={styles.subtitleText}>
+              <RenderHTML contentWidth={Dimensions.get('window').width} source={{ html: currentCue }} /> {/* Use RenderHTML to display the cue */}
+            </Text>
+          </View>
+        )}
+         
+        </View>
       )}
 
       <View style={styles.opContainer}>
         <Text style={[styles.label, { color: theme.textColor }]}>Select Version:</Text>
         <RNPickerSelect
-  onValueChange={handleOptionChange}
-  items={parsedStreamingInfo.map((info, index) => ({
-    label: `${info.value.decryptionResult.type === 'sub' ? 'Subbed' : 'Dubbed'} - Option ${index + 1}`,
-    value: `${info.value.decryptionResult.type}-${index}`,
-  }))}
-  value={selectedOption}
-  style={pickerSelectStyles}
-  placeholder={{}}
-/>
+          onValueChange={handleOptionChange}
+          items={parsedStreamingInfo.map((info, index) => ({
+            label: `${info.value.decryptionResult.type === 'sub' ? 'Subbed' : 'Dubbed'} - Option ${index + 1}`,
+            value: `${info.value.decryptionResult.type}-${index}`,
+          }))}
+          value={selectedOption}
+          style={pickerSelectStyles}
+          placeholder={{}}
+        />
       </View>
 
       {currentSource?.tracks && currentSource.tracks.length > 0 && (
         <View style={styles.opContainer}>
           <Text style={[styles.label, { color: theme.textColor }]}>Subtitles:</Text>
           <RNPickerSelect
-  onValueChange={(itemValue: string | null) => handleSubtitleChange(itemValue)}
-  items={[
-    { label: 'None', value: null },
-    ...currentSource.tracks.map((track, index) => ({
-      label: track.label,
-      value: track.file,
-    })),
-  ]}
-  value={selectedSubtitleTrack}
-  style={pickerSelectStyles}
-  placeholder={{}}
-/>
+            onValueChange={(itemValue: string | null) => handleSubtitleChange(itemValue)}
+            items={[
+              { label: 'None', value: null },
+              ...currentSource.tracks.map((track) => ({
+                label: track.label,
+                value: track.file,
+              })),
+            ]}
+            value={selectedSubtitleTrack}
+            style={pickerSelectStyles}
+            placeholder={{}}
+          />
         </View>
       )}
     </ScrollView>
@@ -205,22 +245,23 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     backgroundColor: 'black',
   },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
+  fullscreenVideo: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
   },
-  button: {
-    padding: 10,
-    marginHorizontal: 10,
-    backgroundColor: '#ddd',
-    borderRadius: 5,
+  subtitleContainer: {
+    position: 'absolute',
+    bottom: 30,
+    width: '100%',
+    alignItems: 'center',
   },
-  activeButton: {
-    backgroundColor: '#007AFF',
+  fullscreenSubtitle: {
+    bottom: 50, // Adjust for full-screen mode
   },
-  buttonText: {
-    fontSize: 16,
+  subtitleText: {
+    fontSize: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', // Add a background for better visibility
+    padding: 5,
   },
   opContainer: {
     marginTop: 20,
@@ -229,11 +270,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 10,
   },
-  picker: {
-    width: '100%',
-    height: 50,
-  },
 });
-
 
 export default StreamScreen;
