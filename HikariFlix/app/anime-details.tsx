@@ -66,6 +66,7 @@ interface CommonEpisode {
   title: string;
   episodeNumber?: string;
   japanese_title?: string;
+  slug?: string;
 }
 
 // Interface for stream details
@@ -192,7 +193,6 @@ const AnimeDetails = () => {
 
   const handleHentaiSearch = useCallback(async (title: string | null) => {
     if (!title) return;
-    console.log(title)
     const sanitizedKeyword = encodeURIComponent(title.replace(/[^\w\s]/gi, ' '));
 
     try {
@@ -203,6 +203,7 @@ const AnimeDetails = () => {
         const episodes: CommonEpisode[] = hentaiData.episodes.map((episode) => ({
           title: episode.name,
           id: episode.id.toString(),
+          slug: episode.slug?.toString(),
         }));
         setEpisodeList(episodes);
         setNoEpisodesFound(episodes.length === 0);
@@ -316,22 +317,38 @@ const AnimeDetails = () => {
   }, [handleAnimeSearch]);
 
   const handleEpisodePress = useCallback(async (episode: CommonEpisode) => {
-    setIsNavigating(true); // Set navigation loading state
-    const streamingInfo = await handleStreamSearch(episode.id);
-    if (streamingInfo) {
+    setIsNavigating(true); // Set navigation loading state    
+    // Check if the anime is hentai
+    const isHentaiAnime = isHentai(data.Media.genres); // Check if the current anime is hentai
+    if (isHentaiAnime && episode.slug) {
+      const slug = episode.slug; // Get the slug from the episode
+      const search: HentaiResponse = await fetchHentai(slug); // Use slug instead of sanitizedKeyword
+      const streams = search.results[0].streams
       router.push({
-        pathname: '/streamScreen',
+        pathname: '/hentaiStreamScreen', // Corrected pathname to a valid route
         params: { 
           episodeTitle: episode.title,
-          streamingInfo: JSON.stringify(streamingInfo)
+          streams: JSON.stringify(streams) // Send streams to the screen
         }
-      });
-    } else {
-      // Handle the case when streaming info is not available
-      console.log("Streaming info not available for this episode");
-    }
-    setIsNavigating(false); // Reset navigation loading state after operation
-  }, [router, handleStreamSearch]);
+      });}
+    else{
+      const streamingInfo = await handleStreamSearch(episode.id);
+      if (streamingInfo) {
+        router.push({
+          pathname: '/streamScreen',
+          params: { 
+            episodeTitle: episode.title,
+            streamingInfo: JSON.stringify(streamingInfo)
+          }
+        });
+      }else {
+        // Handle the case when streaming info is not available
+        console.log("Streaming info not available for this episode");
+      }
+      setIsNavigating(false); // Reset navigation loading state after operation
+    } 
+       
+      }, [router,handleHentaiSearch, handleStreamSearch, data]);
 
   const isHentai = (genres: string[]): boolean => {
     return genres.includes('Hentai');
