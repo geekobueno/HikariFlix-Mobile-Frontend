@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native'; // Add this import
+import { View, Text, StyleSheet, ScrollView } from 'react-native'; // Add this import
 import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
 import RNPickerSelect from 'react-native-picker-select';
