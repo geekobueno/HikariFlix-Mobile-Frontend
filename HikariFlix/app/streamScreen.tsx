@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
-import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
+import { Video, AVPlaybackStatus, ResizeMode, VideoFullscreenUpdateEvent, VideoFullscreenUpdate } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
 import RNPickerSelect from 'react-native-picker-select';
 import { useNavigation } from '@react-navigation/native';
@@ -153,6 +153,19 @@ const StreamScreen: React.FC = () => {
     }
   }, [subtitleCues]);
 
+  const onFullscreenUpdate = useCallback((event: VideoFullscreenUpdateEvent) => {
+    switch (event.fullscreenUpdate) {
+      case VideoFullscreenUpdate.PLAYER_WILL_PRESENT:
+      case VideoFullscreenUpdate.PLAYER_DID_PRESENT:
+        setIsFullScreen(true);
+        break;
+      case VideoFullscreenUpdate.PLAYER_WILL_DISMISS:
+      case VideoFullscreenUpdate.PLAYER_DID_DISMISS:
+        setIsFullScreen(false);
+        break;
+    }
+  }, []);
+
   if (!isLocalSearchParams(params)) {
     return <Text>Error: Invalid search parameters.</Text>;
   }
@@ -164,29 +177,34 @@ const StreamScreen: React.FC = () => {
       {error ? (
         <Text style={[styles.errorText, { color: theme.textColor }]}>{error}</Text>
       ) : (
-        <View>
-          <Video
-            ref={videoRef}
-            source={getVideoSource() || { uri: '' }} // Fallback to an empty URI
-            rate={1.0}
-            volume={1.0}
-            isMuted={false}
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay={true}
-            useNativeControls={true}
-            style={[styles.video, { backgroundColor: 'black' }]}
-            onError={handleVideoError}
-            onPlaybackStatusUpdate={onPlaybackStatusUpdate} // Track current playback status
-          />
-           {currentCue && (
+        <View style={styles.videoContainer}>
+        <Video
+          ref={videoRef}
+          source={getVideoSource() || { uri: '' }}
+          rate={1.0}
+          volume={1.0}
+          isMuted={false}
+          resizeMode={ResizeMode.CONTAIN}
+          shouldPlay={true}
+          useNativeControls={true}
+          style={[styles.video, isFullScreen && styles.fullscreenVideo]}
+          onError={handleVideoError}
+          onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+          onFullscreenUpdate={onFullscreenUpdate}
+        />
+        {currentCue && (
           <View style={[styles.subtitleContainer, isFullScreen && styles.fullscreenSubtitle]}>
-            <Text style={styles.subtitleText}>
-              <RenderHTML contentWidth={Dimensions.get('window').width} source={{ html: currentCue }} /> {/* Use RenderHTML to display the cue */}
-            </Text>
+            <RenderHTML 
+              contentWidth={isFullScreen ? Dimensions.get('window').width : Dimensions.get('window').width - 40}
+              source={{ html: currentCue }}
+              tagsStyles={{
+                body: styles.subtitleText,
+              }}
+            />
           </View>
         )}
-         
-        </View>
+      </View>
+
       )}
 
       <View style={styles.opContainer}>
@@ -226,6 +244,11 @@ const StreamScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  videoContainer: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 16 / 9,
+  },
   errorText: {
     fontSize: 16,
     textAlign: 'center',
@@ -252,16 +275,20 @@ const styles = StyleSheet.create({
   subtitleContainer: {
     position: 'absolute',
     bottom: 30,
-    width: '100%',
+    left: 0,
+    right: 0,
     alignItems: 'center',
   },
   fullscreenSubtitle: {
-    bottom: 50, // Adjust for full-screen mode
+    bottom: 50,
   },
   subtitleText: {
+    color: 'white',
     fontSize: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)', // Add a background for better visibility
+    textAlign: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 5,
+    borderRadius: 5,
   },
   opContainer: {
     marginTop: 20,

@@ -9,17 +9,18 @@ export default function RootLayout() {
 
   return (
     <ApolloProvider client={client}>
-      <Stack 
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: currentTheme.headerBackgroundColor,
-          },
-          headerTintColor: currentTheme.headerTextColor,
-          headerShown: true,
-          headerBackVisible: true,
-        }}
-      >
-        <Stack.Screen 
+      <Stack initialRouteName="splash"
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: currentTheme.headerBackgroundColor,
+        },
+        headerTintColor: currentTheme.headerTextColor,
+        headerShown: true,
+        headerBackVisible: true,
+        headerBackTitleVisible: false
+      }}>
+      <Stack.Screen name="splashScreen" options={{ headerShown: false }} />
+      <Stack.Screen 
           name="(tabs)" 
           options={{ 
             headerShown: false,
@@ -67,7 +68,7 @@ export default function RootLayout() {
             headerBackVisible: true, // Added to hide the back button
           }} 
         />
-      </Stack>
+    </Stack>
     </ApolloProvider>
   );
 }
