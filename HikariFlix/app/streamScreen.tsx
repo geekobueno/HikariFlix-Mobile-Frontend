@@ -87,11 +87,20 @@ const StreamScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('StreamScreen loaded'); // Log when the screen is loaded
     if (parsedStreamingInfo?.length > 0) {
       const defaultSource = parsedStreamingInfo[0].value.decryptionResult;
       setCurrentSource(defaultSource.source);
       setSelectedOption(`${defaultSource.type}-0`);
     }
+
+    return () => {
+      console.log('Leaving StreamScreen'); // Log when leaving the screen
+      // Stop the video when leaving the screen
+      if (videoRef.current) {
+        videoRef.current.stopAsync(); // Stop the video playback
+      }
+    };
   }, [parsedStreamingInfo]);
 
   useLayoutEffect(() => {
@@ -169,6 +178,20 @@ const StreamScreen: React.FC = () => {
   if (!isLocalSearchParams(params)) {
     return <Text>Error: Invalid search parameters.</Text>;
   }
+
+  // New function to load video asynchronously
+  const loadVideoAsync = useCallback(async () => {
+    const videoSource = getVideoSource();
+    if (videoRef.current && videoSource) {
+      await videoRef.current.loadAsync(videoSource);
+      await videoRef.current.playAsync(); // Start playback after loading
+    }
+  }, [getVideoSource]);
+
+  // Call loadVideoAsync when currentSource changes
+  useEffect(() => {
+    loadVideoAsync();
+  }, [currentSource]);
 
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.backgroundColor }]}>

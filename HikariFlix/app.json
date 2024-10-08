@@ -10,6 +10,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.geekobueno.HikariFlix"
     },
+    "icon": "./assets/icon.png",
     "android": {
       "package": "com.geekobueno.HikariFlix"
     },

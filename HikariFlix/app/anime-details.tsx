@@ -319,7 +319,7 @@ const AnimeDetails = () => {
   const handleEpisodePress = useCallback(async (episode: CommonEpisode) => {
     setIsNavigating(true); // Set navigation loading state    
     // Check if the anime is hentai
-    const isHentaiAnime = isHentai(data.Media.genres); // Check if the current anime is hentai
+    const isHentaiAnime = isHentai(data.Media.genres);
     if (isHentaiAnime ) {
       let title=null
       if (episode.slug) {
@@ -347,7 +347,7 @@ const AnimeDetails = () => {
       setIsNavigating(false)
      }
       
-      if (!isHentai) {
+      if (!isHentaiAnime) {
         const streamingInfo = await handleStreamSearch(episode.id);
         if (streamingInfo) {
           router.push({
