@@ -78,6 +78,8 @@ const StreamScreen: React.FC = () => {
   const [currentSource, setCurrentSource] = useState<StreamingInfo['value']['decryptionResult']['source'] | null>(null);
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>('');
+  const [videoLayout, setVideoLayout] = useState({ width: 0, height: 0 });
+  const [overlayPosition, setOverlayPosition] = useState(0);
   const videoRef = useRef<Video>(null);
   const [currentTime, setCurrentTime] = useState(0); // Track the current time
   const [isFullScreen, setIsFullScreen] = useState(false); // Track full screen state
@@ -95,7 +97,6 @@ const StreamScreen: React.FC = () => {
     }
 
     return () => {
-      console.log('Leaving StreamScreen'); // Log when leaving the screen
       // Stop the video when leaving the screen
       if (videoRef.current) {
         videoRef.current.stopAsync(); // Stop the video playback
@@ -175,23 +176,39 @@ const StreamScreen: React.FC = () => {
     }
   }, []);
 
+  const onVideoLayout = useCallback((event: { nativeEvent: { layout: { width: any; height: any; }; }; }) => {
+    const { width, height } = event.nativeEvent.layout;
+    setVideoLayout({ width, height });
+    // Position the overlay at the bottom of the video
+    setOverlayPosition(height - 60); // Adjust 60 as needed for padding
+  }, []);
+
+  const renderSubtitles = useCallback(() => {
+    if (!currentCue) return null;
+
+    const subtitleStyles = isFullScreen ? styles.fullscreenSubtitle : styles.subtitleText;
+    const containerStyles = [
+      styles.subtitleContainer,
+      isFullScreen ? styles.fullscreenSubtitleContainer : null,
+      { top: overlayPosition }
+    ];
+
+    return (
+      <View style={containerStyles}>
+        <RenderHTML 
+          contentWidth={isFullScreen ? Dimensions.get('window').width : videoLayout.width}
+          source={{ html: currentCue }}
+          tagsStyles={{
+            body: subtitleStyles,
+          }}
+        />
+      </View>
+    );
+  }, [currentCue, isFullScreen, overlayPosition, videoLayout.width]);
+
   if (!isLocalSearchParams(params)) {
     return <Text>Error: Invalid search parameters.</Text>;
   }
-
-  // New function to load video asynchronously
-  const loadVideoAsync = useCallback(async () => {
-    const videoSource = getVideoSource();
-    if (videoRef.current && videoSource) {
-      await videoRef.current.loadAsync(videoSource);
-      await videoRef.current.playAsync(); // Start playback after loading
-    }
-  }, [getVideoSource]);
-
-  // Call loadVideoAsync when currentSource changes
-  useEffect(() => {
-    loadVideoAsync();
-  }, [currentSource]);
 
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.backgroundColor }]}>
@@ -201,32 +218,23 @@ const StreamScreen: React.FC = () => {
         <Text style={[styles.errorText, { color: theme.textColor }]}>{error}</Text>
       ) : (
         <View style={styles.videoContainer}>
-        <Video
-          ref={videoRef}
-          source={getVideoSource() || { uri: '' }}
-          rate={1.0}
-          volume={1.0}
-          isMuted={false}
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay={true}
-          useNativeControls={true}
-          style={[styles.video, isFullScreen && styles.fullscreenVideo]}
-          onError={handleVideoError}
-          onPlaybackStatusUpdate={onPlaybackStatusUpdate}
-          onFullscreenUpdate={onFullscreenUpdate}
-        />
-        {currentCue && (
-          <View style={[styles.subtitleContainer, isFullScreen && styles.fullscreenSubtitle]}>
-            <RenderHTML 
-              contentWidth={isFullScreen ? Dimensions.get('window').width : Dimensions.get('window').width - 40}
-              source={{ html: currentCue }}
-              tagsStyles={{
-                body: styles.subtitleText,
-              }}
-            />
-          </View>
-        )}
-      </View>
+          <Video
+            ref={videoRef}
+            source={getVideoSource() || { uri: '' }}
+            rate={1.0}
+            volume={1.0}
+            isMuted={false}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay={true}
+            useNativeControls={true}
+            style={styles.video}
+            onError={handleVideoError}
+            onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+            onFullscreenUpdate={onFullscreenUpdate}
+            onLayout={onVideoLayout}
+          />
+          {renderSubtitles()}
+        </View>
 
       )}
 
@@ -267,11 +275,6 @@ const StreamScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  videoContainer: {
-    position: 'relative',
-    width: '100%',
-    aspectRatio: 16 / 9,
-  },
   errorText: {
     fontSize: 16,
     textAlign: 'center',
@@ -286,32 +289,44 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
   },
-  video: {
+  videoContainer: {
+    position: 'relative',
     width: '100%',
     aspectRatio: 16 / 9,
-    backgroundColor: 'black',
   },
-  fullscreenVideo: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
+  video: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'black',
   },
   subtitleContainer: {
     position: 'absolute',
-    bottom: 30,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
-  fullscreenSubtitle: {
-    bottom: 50,
+  fullscreenSubtitleContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 40, // Adjust as needed
+    alignItems: 'center',
   },
   subtitleText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 5,
     borderRadius: 5,
+  },
+  fullscreenSubtitle: {
+    color: 'white',
+    fontSize: 20,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 8,
+    borderRadius: 8,
   },
   opContainer: {
     marginTop: 20,
