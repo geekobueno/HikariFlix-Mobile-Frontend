@@ -15,7 +15,6 @@ export default function RootLayout() {
           backgroundColor: currentTheme.headerBackgroundColor,
         },
         headerTintColor: currentTheme.headerTextColor,
-        headerShown: true,
         headerBackVisible: true,
         headerBackTitleVisible: false
       }}>
@@ -23,7 +22,10 @@ export default function RootLayout() {
       <Stack.Screen 
           name="(tabs)" 
           options={{ 
-            headerShown: false,
+            title: '',
+            headerShown: true,
+            headerTransparent: true,
+            contentStyle: { paddingTop: 80, marginTop: -10, },
           }} 
         />
         <Stack.Screen 
