@@ -329,7 +329,6 @@ const AnimeDetails = () => {
         title=episode.title
       }
       const search: HentaiResponse = await fetchHentai(title);
-      console.log(search) // Use slug instead of sanitizedKeyword
       if (search) {
         const streams = search.results[0].streams
         router.push({

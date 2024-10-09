@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
-import { Video, AVPlaybackStatus, ResizeMode, VideoFullscreenUpdateEvent, VideoFullscreenUpdate } from 'expo-av';
+import { Video, AVPlaybackStatus, ResizeMode  } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
 import RNPickerSelect from 'react-native-picker-select';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../constants/theme';
 import { WebVTTParser } from 'webvtt-parser';
 import RenderHTML from 'react-native-render-html'; 
+import { useFocusEffect } from '@react-navigation/native';
 
 
 interface StreamingInfo {
@@ -89,19 +90,11 @@ const StreamScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('StreamScreen loaded'); // Log when the screen is loaded
     if (parsedStreamingInfo?.length > 0) {
       const defaultSource = parsedStreamingInfo[0].value.decryptionResult;
       setCurrentSource(defaultSource.source);
       setSelectedOption(`${defaultSource.type}-0`);
     }
-
-    return () => {
-      // Stop the video when leaving the screen
-      if (videoRef.current) {
-        videoRef.current.stopAsync(); // Stop the video playback
-      }
-    };
   }, [parsedStreamingInfo]);
 
   useLayoutEffect(() => {
@@ -109,6 +102,26 @@ const StreamScreen: React.FC = () => {
       title: episodeTitle,
     });
   }, [navigation, episodeTitle]);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('In focus')
+      return () => {
+        console.log('Out of focus')
+        if (videoRef.current) {
+          videoRef.current.pauseAsync();
+        }
+      };
+    }, [])
+  );
+
+  useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pauseAsync();
+      }
+    };
+  }, []);
   
   const handleOptionChange = useCallback((optionValue: string) => {
     const [type, index] = optionValue.split('-');
@@ -163,26 +176,6 @@ const StreamScreen: React.FC = () => {
     }
   }, [subtitleCues]);
 
-  const onFullscreenUpdate = useCallback((event: VideoFullscreenUpdateEvent) => {
-    switch (event.fullscreenUpdate) {
-      case VideoFullscreenUpdate.PLAYER_WILL_PRESENT:
-      case VideoFullscreenUpdate.PLAYER_DID_PRESENT:
-        setIsFullScreen(true);
-        break;
-      case VideoFullscreenUpdate.PLAYER_WILL_DISMISS:
-      case VideoFullscreenUpdate.PLAYER_DID_DISMISS:
-        setIsFullScreen(false);
-        break;
-    }
-  }, []);
-
-  const onVideoLayout = useCallback((event: { nativeEvent: { layout: { width: any; height: any; }; }; }) => {
-    const { width, height } = event.nativeEvent.layout;
-    setVideoLayout({ width, height });
-    // Position the overlay at the bottom of the video
-    setOverlayPosition(height - 60); // Adjust 60 as needed for padding
-  }, []);
-
   const renderSubtitles = useCallback(() => {
     if (!currentCue) return null;
 
@@ -230,8 +223,6 @@ const StreamScreen: React.FC = () => {
             style={styles.video}
             onError={handleVideoError}
             onPlaybackStatusUpdate={onPlaybackStatusUpdate}
-            onFullscreenUpdate={onFullscreenUpdate}
-            onLayout={onVideoLayout}
           />
           {renderSubtitles()}
         </View>

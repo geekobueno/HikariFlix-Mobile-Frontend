@@ -68,6 +68,20 @@ export default function RootLayout() {
             headerBackVisible: true, // Added to hide the back button
           }} 
         />
+        <Stack.Screen 
+          name="hentaiStreamScreen" 
+          options={{ 
+            title: 'Hentai Stream',
+            headerBackVisible: true, // Added to hide the back button
+          }} 
+        />
+        <Stack.Screen 
+          name="streamScreen" 
+          options={{ 
+            title: 'Anime Stream',
+            headerBackVisible: true, // Added to hide the back button
+          }} 
+        />
     </Stack>
     </ApolloProvider>
   );

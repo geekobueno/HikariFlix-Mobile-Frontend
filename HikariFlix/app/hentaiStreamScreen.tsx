@@ -5,6 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import RNPickerSelect from 'react-native-picker-select';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../constants/theme';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Stream {
   width: number;
@@ -31,6 +32,7 @@ const StreamScreen: React.FC = () => {
   const theme = useTheme();
   const params = useLocalSearchParams();
   const navigation = useNavigation();
+  const [status, setStatus] = useState({});
 
   const { episodeTitle, streams } = useMemo(() => {
     if (!isLocalSearchParams(params)) {
@@ -70,6 +72,28 @@ const StreamScreen: React.FC = () => {
       setError(null);
     }
   }, [parsedStreams]);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('In focus')
+      return () => {
+        console.log('Out of focus')
+        if (videoRef.current) {
+          console.log('removing video')
+          videoRef.current.pauseAsync();
+          console.log('removed video')
+        }
+      };
+    }, [])
+  );
+
+  useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pauseAsync();
+      }
+    };
+  }, []);
 
   const getVideoSource = useCallback(() => {
     return selectedStream?.url ? { uri: selectedStream.url } : null;
@@ -126,6 +150,7 @@ const StreamScreen: React.FC = () => {
           useNativeControls={true}
           style={styles.video}
           onError={(error) => handleVideoError(error)}
+          onPlaybackStatusUpdate={status => setStatus(() => status)}
         />
       )}
 
