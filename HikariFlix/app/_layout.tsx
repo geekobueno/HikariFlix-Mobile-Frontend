@@ -22,66 +22,64 @@ export default function RootLayout() {
       <Stack.Screen 
           name="(tabs)" 
           options={{ 
-            title: '',
+            title: 'HikariFlix',
             headerShown: true,
-            headerTransparent: true,
-            contentStyle: { paddingTop: 80, marginTop: -10, },
           }} 
         />
         <Stack.Screen 
           name="category" 
           options={{ 
             title: 'Categories',
-            headerBackVisible: true, // Added to hide the back button
+            headerBackVisible: true, 
           }} 
         />
         <Stack.Screen 
           name="category-anime" 
           options={{ 
             title: 'Category Anime',
-            headerBackVisible: true, // Added to hide the back button
+            headerBackVisible: true, 
           }} 
         />
         <Stack.Screen 
           name="anime-details" 
           options={{ 
             title: 'Anime Details',
-            headerBackVisible: true, // Added to hide the back button
+            headerBackVisible: true, 
           }} 
         />
         <Stack.Screen 
           name="popularAll" 
           options={{ 
             title: 'All Popular Anime',
-            headerBackVisible: true, // Added to hide the back button
+            headerBackVisible: true, 
           }} 
         />
         <Stack.Screen 
           name="trendingAll" 
           options={{ 
             title: 'All Trending Anime',
-            headerBackVisible: true, // Added to hide the back button
+            headerBackVisible: true, 
           }} 
         />
         <Stack.Screen 
           name="topAll" 
           options={{ 
             title: 'Top Anime',
-            headerBackVisible: true, // Added to hide the back button
+            headerBackVisible: true, 
           }} 
         />
         <Stack.Screen 
           name="hentaiStreamScreen" 
           options={{ 
             title: 'Hentai Stream',
-            headerBackVisible: true, // Added to hide the back button
+            headerBackVisible: true, 
           }} 
         />
         <Stack.Screen 
           name="streamScreen" 
           options={{ 
             title: 'Anime Stream',
-            headerBackVisible: true, // Added to hide the back button
+            headerBackVisible: true, 
           }} 
         />
     </Stack>

@@ -26,7 +26,6 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: currentTheme.backgroundColor }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: currentTheme.headerBackgroundColor }]}>
-        <Text style={[styles.headerText, { color: currentTheme.headerTextColor }]}>H</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={() => router.push('/category')}>
             <Text style={[styles.headerButtonText, { color: currentTheme.headerTextColor }]}>Categories</Text>
@@ -59,7 +58,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 15,
@@ -73,7 +72,7 @@ const styles = StyleSheet.create({
   },
   headerButtonText: {
     marginHorizontal: 10,
-    fontSize: 16,
+    fontSize: 20,
   },
   section: {
     marginVertical: 20,
