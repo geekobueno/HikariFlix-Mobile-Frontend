@@ -1,4 +1,4 @@
-# TachiAnime-Frontend 
-The mobile frontend for the TachiAnime project
+# HikariFlix-Frontend 
+The mobile frontend for the HikarFlix project
 
 built with react native and expo
