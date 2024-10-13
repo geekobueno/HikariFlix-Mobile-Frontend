@@ -24,6 +24,7 @@ export default function RootLayout() {
           options={{ 
             title: 'HikariFlix',
             headerShown: true,
+            headerTitleAlign: 'center'
           }} 
         />
         <Stack.Screen 
