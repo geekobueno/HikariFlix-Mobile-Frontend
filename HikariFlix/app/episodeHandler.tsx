@@ -1,4 +1,33 @@
 import * as api from '../api/restAPI/api';
+import { hianimeEpisodes, VAEpisodes } from '../api/restAPI/api';
+
+
+interface VAResponse {
+    success: boolean;
+    results: {
+      VO: Array<Res>;
+      VF: Array<Res>;
+    };
+  }
+  
+  interface Res {
+    title: string;
+    link: string;
+  }
+
+  interface VAEpisodeResponse {
+    success: boolean;
+    results: {
+      currentPageId: string;
+      episodes: Array<VAEpisode>;
+    };
+  }
+  
+  interface VAEpisode {
+    title: string;
+    link: string;
+  }
+  
 
 // Interface for a single source of the video (HLS stream, etc.)
 interface AnimeSource {
@@ -15,7 +44,7 @@ interface AnimeTrack {
 }
 
 // Interface for the decryption result
-interface AnimeDecryptionResult {
+interface hianimeDecryptionResult {
   type: string;
   source: {
     sources: AnimeSource[];
@@ -26,10 +55,10 @@ interface AnimeDecryptionResult {
 }
 
 // Interface for a streamingInfo entry
-interface AnimeStreamingInfo {
+interface hianimeStreamingInfo {
   status: string;
   value: {
-    decryptionResult: AnimeDecryptionResult;
+    decryptionResult: hianimeDecryptionResult;
   };
 }
 
@@ -70,19 +99,19 @@ interface HentaiResponse {
   results: HentaiResult[];
 }
 
-interface Anime {
+interface hianime {
   id: string;
   title: string;
   data_id: string;
   link: string;
 }
 
-interface EpisodeResponse {
+interface hianimeEpisodeResponse {
   success: boolean;
-  results: Episode[];
+  results: hianimeEpisode[];
 }
 
-interface Episode {
+interface hianimeEpisode {
   number?: string;
   episode_no?: string;
   id: string;
@@ -90,9 +119,9 @@ interface Episode {
   japanese_title?: string;
 }
 
-interface AnimeResponse {
+interface hianimeResponse {
   success: boolean;
-  result: Anime;
+  result: hianime;
 }
 
 export const isHentai = (genres: string[]): boolean => {
@@ -140,20 +169,20 @@ export const handleHentaiSearch = async (title: string | null) => {
   return { episodes: [], noEpisodesFound: true };
 };
 
-export const handleAnimeSearch = async (englishTitle: string | null, ep: string) => {
+export const handleHianimeSearch = async (englishTitle: string | null, ep: string) => {
   if (!englishTitle) return { episodes: [], noEpisodesFound: true };
 
   const sanitizedKeyword = encodeURIComponent(englishTitle.replace(/[^\w\s]/gi, ' ')).replace(/%3A/g, ':');
 
   try {
-    const searchResult: AnimeResponse = await api.hianimeSearch(sanitizedKeyword, ep);
+    const searchResult: hianimeResponse = await api.hianimeSearch(sanitizedKeyword, ep);
 
     if (!searchResult.success) {
       return { episodes: [], noEpisodesFound: true };
     }
 
     const animeData = searchResult.result;
-    const episodesResponse: EpisodeResponse = await api.hianimeEpisodes(animeData.id);
+    const episodesResponse: hianimeEpisodeResponse = await api.hianimeEpisodes(animeData.id);
 
     if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
       const episodes: CommonEpisode[] = episodesResponse.results.map((episode) => ({
@@ -165,14 +194,14 @@ export const handleAnimeSearch = async (englishTitle: string | null, ep: string)
     }
   } catch (animeError) {
     try {
-      const searchResult: AnimeResponse = await api.hianimeSearch(sanitizedKeyword, '0');
+      const searchResult: hianimeResponse = await api.hianimeSearch(sanitizedKeyword, '0');
 
       if (!searchResult.success) {
         return { episodes: [], noEpisodesFound: true };
       }
 
       const animeData = searchResult.result;
-      const episodesResponse: EpisodeResponse = await api.hianimeEpisodes(animeData.id);
+      const episodesResponse: hianimeEpisodeResponse = await api.hianimeEpisodes(animeData.id);
 
       if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
         const episodes: CommonEpisode[] = episodesResponse.results.map((episode) => ({
@@ -190,7 +219,65 @@ export const handleAnimeSearch = async (englishTitle: string | null, ep: string)
   return { episodes: [], noEpisodesFound: true };
 };
 
-export const handleStreamSearch = async (episodeId: string) => {
+export const handleVASearchVO = async (englishTitle: string | null) => {
+    if (!englishTitle) return { episodes: [], noEpisodesFound: true };
+  
+    const sanitizedKeyword = encodeURIComponent(englishTitle.replace(/[^\w\s]/gi, ' ')).replace(/%3A/g, ':');
+  
+    try {
+      const searchResult: VAResponse = await api.VASearch(sanitizedKeyword);
+  
+      if (!searchResult.success) {
+        return { episodes: [], noEpisodesFound: true };
+      }
+      const animeData = searchResult.results;
+      const episodesResponse: VAEpisodeResponse = await api.hianimeEpisodes(animeData.VO[0].link);
+  
+      if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
+        const episodes: CommonEpisode[] = episodesResponse.results.map((episode) => ({
+          id: episode.id,
+          title: episode.title,
+          episodeNumber: episode.episode_no || episode.number,
+        }));
+        return { episodes, noEpisodesFound: false };
+      }
+    } catch (error) {
+        console.error('Anime fetch failed :', error);
+      }
+  
+    return { episodes: [], noEpisodesFound: true };
+  };
+
+  export const handleVASearchVF = async (englishTitle: string | null) => {
+    if (!englishTitle) return { episodes: [], noEpisodesFound: true };
+  
+    const sanitizedKeyword = encodeURIComponent(englishTitle.replace(/[^\w\s]/gi, ' ')).replace(/%3A/g, ':');
+  
+    try {
+      const searchResult: VAResponse = await api.VASearch(sanitizedKeyword);
+  
+      if (!searchResult.success) {
+        return { episodes: [], noEpisodesFound: true };
+      }
+      const animeData = searchResult.results;
+      const episodesResponse: VAEpisodeResponse = await api.hianimeEpisodes(animeData.VF[0].link);
+  
+      if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
+        const episodes: CommonEpisode[] = episodesResponse.results.episodes.map((episode, index) => ({
+          id: '0',
+          title: episode.title,
+          episodeNumber: (index + 1).toString(), // Count episode number based on index
+        }));
+        return { episodes, noEpisodesFound: false };
+      }
+    }  catch (error) {
+        console.error('Anime fetch failed :', error);
+      }
+  
+    return { episodes: [], noEpisodesFound: true };
+  };
+
+export const handleHianimeStream = async (episodeId: string) => {
   try {
     const search = await api.hianimeStream(episodeId);
     return search.results.streamingInfo;
@@ -200,4 +287,4 @@ export const handleStreamSearch = async (episodeId: string) => {
   }
 };
 
-export type { CommonEpisode, HentaiResponse, AnimeStreamingInfo };
+export type { CommonEpisode, HentaiResponse, hianimeStreamingInfo };

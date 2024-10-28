@@ -8,7 +8,7 @@ import { GET_ANIME_DETAILS } from '../api/graphQL/queries';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as api from '../api/restAPI/api';
-import { handleHentaiSearch, handleAnimeSearch, handleStreamSearch, isHentai, CommonEpisode, HentaiResponse, AnimeStreamingInfo } from './episodeHandler';
+import { handleHentaiSearch, handleHianimeSearch, handleHianimeStream, isHentai, CommonEpisode, HentaiResponse, hianimeStreamingInfo } from './episodeHandler';
 
 interface AnimeDetails {
   id: number;
@@ -78,7 +78,7 @@ const AnimeDetails = () => {
             setNoEpisodesFound(result.noEpisodesFound);
           }
         } else {
-          const result = await handleAnimeSearch(data.Media.title.english, data.Media.episodes);
+          const result = await handleHianimeSearch(data.Media.title.english, data.Media.episodes);
           setEpisodeList(result.episodes);
           setNoEpisodesFound(result.noEpisodesFound);
         }
@@ -107,7 +107,7 @@ const AnimeDetails = () => {
         });
       }
     } else {
-      const streamingInfo = await handleStreamSearch(episode.id);
+      const streamingInfo = await handleHianimeStream(episode.id);
       if (streamingInfo) {
         router.push({
           pathname: '/streamScreen',
