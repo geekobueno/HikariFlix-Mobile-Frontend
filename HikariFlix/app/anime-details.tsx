@@ -7,7 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GET_ANIME_DETAILS } from '../api/graphQL/queries';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { searchAnime, fetchEpisodes, fetchHentai, fetchHentaiStream, fetchStream } from '../api/restAPI/api';
+import * as api from '../api/restAPI/api';
 
 
 // Interface for a single source of the video (HLS stream, etc.)
@@ -24,11 +24,6 @@ interface AnimeTrack {
   default?: boolean; // Optional, as not all tracks will have this property
 }
 
-// Interface for the intro and outro timings
-interface AnimeIntroOutro {
-  start: number;
-  end: number;
-}
 
 // Interface for the decryption result, including video and track information
 interface AnimeDecryptionResult {
@@ -37,8 +32,6 @@ interface AnimeDecryptionResult {
     sources: AnimeSource[];
     tracks: AnimeTrack[];
     encrypted: boolean;
-    intro: AnimeIntroOutro;
-    outro: AnimeIntroOutro;
   };
   server: string; // Server providing the stream
 }
@@ -50,15 +43,6 @@ interface AnimeStreamingInfo {
     decryptionResult: AnimeDecryptionResult;
   };
 }
-
-// Main interface for the API response
-interface AnimeStreamingResponse {
-  success: boolean;
-  results: {
-    streamingInfo: AnimeStreamingInfo[];
-  };
-}
-
 
 // Common Episode Interface
 interface CommonEpisode {
@@ -196,7 +180,7 @@ const AnimeDetails = () => {
     const sanitizedKeyword = encodeURIComponent(title.replace(/[^\w\s]/gi, ' '));
 
     try {
-      const search: HentaiResponse = await fetchHentai(sanitizedKeyword);
+      const search: HentaiResponse = await api.fetchHentai(sanitizedKeyword);
 
       if (search.results.length > 0) {
         const hentaiData = search.results[0];
@@ -218,7 +202,7 @@ const AnimeDetails = () => {
 
       for (const suffix of searchSuffixes) {
         try {
-          const hentaiStreamResponse: HentaiResponse = await fetchHentaiStream(sanitizedKeyword, suffix);
+          const hentaiStreamResponse: HentaiResponse = await api.fetchHentaiStream(sanitizedKeyword, suffix);
           if (hentaiStreamResponse.results.length > 0) {
             const streamData = hentaiStreamResponse.results[0];
             const episodes: CommonEpisode[] = streamData.episodes.map((episode) => ({
@@ -248,7 +232,7 @@ const AnimeDetails = () => {
     const sanitizedKeyword = encodeURIComponent(englishTitle.replace(/[^\w\s]/gi, ' ')).replace(/%3A/g, ':');
   
     try {
-      const searchResult: AnimeResponse = await searchAnime(sanitizedKeyword,ep);
+      const searchResult: AnimeResponse = await api.hianimeSearch(sanitizedKeyword,ep);
   
       if (!searchResult.success) {
         setNoEpisodesFound(true);
@@ -256,7 +240,7 @@ const AnimeDetails = () => {
         console.log("Anime search failed.");
       } else {
         const animeData = searchResult.result;
-        const episodesResponse: EpisodeResponse = await fetchEpisodes(animeData.id);
+        const episodesResponse: EpisodeResponse = await api.hianimeEpisodes(animeData.id);
   
         if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
           const episodes: CommonEpisode[] = episodesResponse.results.map((episode) => ({
@@ -274,7 +258,7 @@ const AnimeDetails = () => {
       }
     } catch (animeError) {
       try {
-        const searchResult: AnimeResponse = await searchAnime(sanitizedKeyword,'0');
+        const searchResult: AnimeResponse = await api.hianimeSearch(sanitizedKeyword,'0');
     
         if (!searchResult.success) {
           setNoEpisodesFound(true);
@@ -282,7 +266,7 @@ const AnimeDetails = () => {
           console.log("Anime search failed.");
         } else {
           const animeData = searchResult.result;
-          const episodesResponse: EpisodeResponse = await fetchEpisodes(animeData.id);
+          const episodesResponse: EpisodeResponse = await api.hianimeEpisodes(animeData.id);
     
           if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
             const episodes: CommonEpisode[] = episodesResponse.results.map((episode) => ({
@@ -308,7 +292,7 @@ const AnimeDetails = () => {
 
   const handleStreamSearch = useCallback(async (episodeId: string) => {
     try {
-      const search = await fetchStream(episodeId);
+      const search = await api.hianimeStream(episodeId);
       return search.results.streamingInfo;
     } catch (error) {
       console.log(error);
@@ -328,7 +312,7 @@ const AnimeDetails = () => {
       else{
         title=episode.title
       }
-      const search: HentaiResponse = await fetchHentai(title);
+      const search: HentaiResponse = await api.fetchHentai(title);
       if (search) {
         const streams = search.results[0].streams
         router.push({
