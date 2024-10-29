@@ -8,7 +8,7 @@ import { GET_ANIME_DETAILS } from '../api/graphQL/queries';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as api from '../api/restAPI/api';
-import { handleHentaiSearch, handleHianimeSearch, handleHianimeStream, isHentai, CommonEpisode, HentaiResponse, hianimeStreamingInfo } from './episodeHandler';
+import * as epHandler from './episodeHandler';
 
 interface AnimeDetails {
   id: number;
@@ -47,7 +47,7 @@ const AnimeDetails = () => {
   const navigation = useNavigation();
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
 
-  const [episodeList, setEpisodeList] = useState<CommonEpisode[]>([]);
+  const [episodeList, setEpisodeList] = useState<epHandler.CommonEpisode[]>([]);
   const [noEpisodesFound, setNoEpisodesFound] = useState(false);
   const [loadingEpisodes, setLoadingEpisodes] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -67,10 +67,10 @@ const AnimeDetails = () => {
   useEffect(() => {
     const fetchEpisodes = async () => {
       if (data && data.Media) {
-        if (isHentai(data.Media.genres)) {
-          const result = await handleHentaiSearch(data.Media.title.romaji);
+        if (epHandler.isHentai(data.Media.genres)) {
+          const result = await epHandler.handleHentaiSearch(data.Media.title.romaji);
           if (result.noEpisodesFound) {
-            const englishResult = await handleHentaiSearch(data.Media.title.english);
+            const englishResult = await epHandler.handleHentaiSearch(data.Media.title.english);
             setEpisodeList(englishResult.episodes);
             setNoEpisodesFound(englishResult.noEpisodesFound);
           } else {
@@ -78,9 +78,9 @@ const AnimeDetails = () => {
             setNoEpisodesFound(result.noEpisodesFound);
           }
         } else {
-          const result = await handleHianimeSearch(data.Media.title.english, data.Media.episodes);
-          setEpisodeList(result.episodes);
-          setNoEpisodesFound(result.noEpisodesFound);
+          const hianimeResult = await epHandler.handleHianimeSearch(data.Media.title.english, data.Media.episodes);
+          setEpisodeList(hianimeResult.episodes);
+          setNoEpisodesFound(hianimeResult.noEpisodesFound);
         }
         setLoadingEpisodes(false);
       }
@@ -89,13 +89,13 @@ const AnimeDetails = () => {
     fetchEpisodes();
   }, [data]);
 
-  const handleEpisodePress = useCallback(async (episode: CommonEpisode) => {
+  const handleEpisodePress = useCallback(async (episode: epHandler.CommonEpisode) => {
     setIsNavigating(true);
-    const isHentaiAnime = isHentai(data.Media.genres);
+    const isHentaiAnime = epHandler.isHentai(data.Media.genres);
     
     if (isHentaiAnime) {
       const title = episode.slug || episode.title;
-      const search: HentaiResponse = await api.fetchHentai(title);
+      const search: epHandler.HentaiResponse = await api.fetchHentai(title);
       if (search) {
         const streams = search.results[0].streams;
         router.push({
@@ -107,7 +107,7 @@ const AnimeDetails = () => {
         });
       }
     } else {
-      const streamingInfo = await handleHianimeStream(episode.id);
+      const streamingInfo = await epHandler.handleHianimeStream(episode.id);
       if (streamingInfo) {
         router.push({
           pathname: '/streamScreen',
@@ -131,7 +131,7 @@ const AnimeDetails = () => {
     }
   }, [data, isFav, addFavorite, removeFavorite]);
 
-  const renderEpisodeItem: ListRenderItem<CommonEpisode> = useCallback(({ item, index }) => (
+  const renderEpisodeItem: ListRenderItem<epHandler.CommonEpisode> = useCallback(({ item, index }) => (
     <TouchableOpacity 
       onPress={() => handleEpisodePress(item)}
       style={[styles.episodeItem, { backgroundColor: currentTheme.backgroundColor }]}
@@ -240,7 +240,7 @@ const AnimeDetails = () => {
             No episodes found for this content.
           </Text>
         ) : (
-          <FlatList<CommonEpisode>
+          <FlatList<epHandler.CommonEpisode>
             data={episodeList}
             keyExtractor={(episode, index) => episode.id || index.toString()}
             renderItem={renderEpisodeItem}

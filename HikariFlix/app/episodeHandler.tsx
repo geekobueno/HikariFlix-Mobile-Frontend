@@ -1,6 +1,27 @@
 import * as api from '../api/restAPI/api';
-import { hianimeEpisodes, VAEpisodes } from '../api/restAPI/api';
 
+
+interface ASResponse {
+  success: boolean;
+  results: AnimeDetails[];
+}
+
+interface AnimeDetails {
+  title: string;
+  description: string;
+  link: string;
+  imgSrc: string;
+}
+
+interface ASSeasons {
+  success: boolean;
+  results: Season[];
+}
+
+interface Season {
+  name: string;
+  url: string;
+}
 
 interface VAResponse {
     success: boolean;
@@ -231,13 +252,13 @@ export const handleVASearchVO = async (englishTitle: string | null) => {
         return { episodes: [], noEpisodesFound: true };
       }
       const animeData = searchResult.results;
-      const episodesResponse: VAEpisodeResponse = await api.hianimeEpisodes(animeData.VO[0].link);
+      const episodesResponse: VAEpisodeResponse = await api.VAEpisodes(animeData.VO[0].link);
   
       if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
-        const episodes: CommonEpisode[] = episodesResponse.results.map((episode) => ({
-          id: episode.id,
+        const episodes: CommonEpisode[] = episodesResponse.results.map((episode, index) => ({
+          id: episode.link,
           title: episode.title,
-          episodeNumber: episode.episode_no || episode.number,
+          episodeNumber: `${index}+1`,
         }));
         return { episodes, noEpisodesFound: false };
       }
@@ -260,17 +281,46 @@ export const handleVASearchVO = async (englishTitle: string | null) => {
         return { episodes: [], noEpisodesFound: true };
       }
       const animeData = searchResult.results;
-      const episodesResponse: VAEpisodeResponse = await api.hianimeEpisodes(animeData.VF[0].link);
+      const episodesResponse: VAEpisodeResponse = await api.VAEpisodes(animeData.VF[0].link);
   
       if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
-        const episodes: CommonEpisode[] = episodesResponse.results.episodes.map((episode, index) => ({
-          id: '0',
+        const episodes: CommonEpisode[] = episodesResponse.results.map((episode, index) => ({
+          id: episode.link,
           title: episode.title,
-          episodeNumber: (index + 1).toString(), // Count episode number based on index
+          episodeNumber: `${index}+1`,
         }));
         return { episodes, noEpisodesFound: false };
       }
     }  catch (error) {
+        console.error('Anime fetch failed :', error);
+      }
+  
+    return { episodes: [], noEpisodesFound: true };
+  };
+
+  export const handleASSearch = async (englishTitle: string | null) => {
+    if (!englishTitle) return { episodes: [], noEpisodesFound: true };
+  
+    const sanitizedKeyword = encodeURIComponent(englishTitle.replace(/[^\w\s]/gi, ' ')).replace(/%3A/g, ':');
+  
+    try {
+      const searchResult: ASResponse = await api.ASSearch(sanitizedKeyword);
+  
+      if (!searchResult.success) {
+        return { episodes: [], noEpisodesFound: true };
+      }
+      const animeData = searchResult.results;
+      const episodesResponse: ASSeasons = await api.ASEpisodes(animeData[0].link);
+  
+      if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
+        const episodes: CommonEpisode[] = episodesResponse.results.map((episode, index) => ({
+          id: episode.url,
+          title: episode.name,
+          episodeNumber: `${index}+1`,
+        }));
+        return { episodes, noEpisodesFound: false };
+      }
+    } catch (error) {
         console.error('Anime fetch failed :', error);
       }
   
