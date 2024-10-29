@@ -82,7 +82,7 @@ export const ASStream = async (url: string) => {
 
 export const VASearch = async (keyword: string) => {
   try {
-    const response = await axios.get(`${BASE_URL}/a/search?keyword=${keyword}`);
+    const response = await axios.get(`${BASE_URL}/v/search?keyword=${keyword}`);
     return response.data; // Assuming the response has the anime data you need
   } catch (error) {
     if (axios.isAxiosError(error)) {

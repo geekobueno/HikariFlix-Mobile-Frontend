@@ -26,8 +26,8 @@ interface Season {
 interface VAResponse {
     success: boolean;
     results: {
-      VO: Array<Res>;
-      VF: Array<Res>;
+      VO: Res;
+      VF: Res;
     };
   }
   
@@ -252,22 +252,21 @@ export const handleVASearchVO = async (englishTitle: string | null) => {
         return { episodes: [], noEpisodesFound: true };
       }
       const animeData = searchResult.results;
-      const episodesResponse: VAEpisodeResponse = await api.VAEpisodes(animeData.VO[0].link);
+      const episodesResponse: VAEpisodeResponse = await api.VAEpisodes(animeData.VO.link);
   
-      if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
-        const episodes: CommonEpisode[] = episodesResponse.results.map((episode, index) => ({
+      if (episodesResponse.success) {
+        const episodes: CommonEpisode[] = episodesResponse.results.episodes.map((episode, index) => ({
           id: episode.link,
           title: episode.title,
-          episodeNumber: `${index}+1`,
+          episodeNumber: `${index+1}`,
         }));
         return { episodes, noEpisodesFound: false };
       }
     } catch (error) {
         console.error('Anime fetch failed :', error);
+        return { episodes: [], noEpisodesFound: true };
       }
-  
-    return { episodes: [], noEpisodesFound: true };
-  };
+    };
 
   export const handleVASearchVF = async (englishTitle: string | null) => {
     if (!englishTitle) return { episodes: [], noEpisodesFound: true };
@@ -281,22 +280,21 @@ export const handleVASearchVO = async (englishTitle: string | null) => {
         return { episodes: [], noEpisodesFound: true };
       }
       const animeData = searchResult.results;
-      const episodesResponse: VAEpisodeResponse = await api.VAEpisodes(animeData.VF[0].link);
+      const episodesResponse: VAEpisodeResponse = await api.VAEpisodes(animeData.VF.link);
   
-      if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
-        const episodes: CommonEpisode[] = episodesResponse.results.map((episode, index) => ({
+      if (episodesResponse.success) {
+        const episodes: CommonEpisode[] = episodesResponse.results.episodes.map((episode, index) => ({
           id: episode.link,
           title: episode.title,
-          episodeNumber: `${index}+1`,
+          episodeNumber: `${index+1}`,
         }));
         return { episodes, noEpisodesFound: false };
       }
     }  catch (error) {
         console.error('Anime fetch failed :', error);
+        return { episodes: [], noEpisodesFound: true };
       }
-  
-    return { episodes: [], noEpisodesFound: true };
-  };
+    };
 
   export const handleASSearch = async (englishTitle: string | null) => {
     if (!englishTitle) return { episodes: [], noEpisodesFound: true };
@@ -316,16 +314,15 @@ export const handleVASearchVO = async (englishTitle: string | null) => {
         const episodes: CommonEpisode[] = episodesResponse.results.map((episode, index) => ({
           id: episode.url,
           title: episode.name,
-          episodeNumber: `${index}+1`,
+          episodeNumber: `${index+1}`,
         }));
         return { episodes, noEpisodesFound: false };
       }
     } catch (error) {
         console.error('Anime fetch failed :', error);
+        return { episodes: [], noEpisodesFound: true };
       }
-  
-    return { episodes: [], noEpisodesFound: true };
-  };
+    };
 
 export const handleHianimeStream = async (episodeId: string) => {
   try {

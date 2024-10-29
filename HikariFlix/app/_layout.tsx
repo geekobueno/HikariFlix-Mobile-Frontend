@@ -77,7 +77,7 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
-          name="streamScreen" 
+          name="hianimeStreamScreen" 
           options={{ 
             title: 'Anime Stream',
             headerBackVisible: true, 

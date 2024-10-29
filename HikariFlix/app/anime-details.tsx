@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as api from '../api/restAPI/api';
 import * as epHandler from './episodeHandler';
+import RNPickerSelect from 'react-native-picker-select';
 
 interface AnimeDetails {
   id: number;
@@ -52,6 +53,17 @@ const AnimeDetails = () => {
   const [loadingEpisodes, setLoadingEpisodes] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
 
+  const [selectedProvider, setSelectedProvider] = useState('hianime');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const providers = [
+    { label: 'Hianime', value: 'hianime' },
+    { label: 'VoirAnime (VO)', value: 'va-vo' },
+    { label: 'VoirAnime (VF)', value: 'va-vf' },
+    { label: 'AnimeSama', value: 'as' }
+  ];
+
+
   const isFav = useMemo(() => {
     return data && data.Media ? isFavorite(data.Media.id) : false;
   }, [data, isFavorite]);
@@ -78,16 +90,45 @@ const AnimeDetails = () => {
             setNoEpisodesFound(result.noEpisodesFound);
           }
         } else {
-          const hianimeResult = await epHandler.handleHianimeSearch(data.Media.title.english, data.Media.episodes);
-          setEpisodeList(hianimeResult.episodes);
-          setNoEpisodesFound(hianimeResult.noEpisodesFound);
+          await fetchEpisodesForProvider(selectedProvider, data.Media);
         }
         setLoadingEpisodes(false);
       }
     };
 
     fetchEpisodes();
-  }, [data]);
+  }, [data, selectedProvider]);
+
+  const fetchEpisodesForProvider = async (provider: string, animeData: any) => {
+    setIsLoading(true);
+    let result: { episodes: epHandler.CommonEpisode[]; noEpisodesFound: boolean } = { episodes: [], noEpisodesFound: true };
+    
+    switch (provider) {
+      case 'hianime':
+        result = await epHandler.handleHianimeSearch(animeData.title.english, animeData.episodes);
+        break;
+      case 'va-vo':
+        result = await epHandler.handleVASearchVO(animeData.title.english) || result;
+        break;
+      case 'va-vf':
+        result = await epHandler.handleVASearchVF(animeData.title.english) || result;
+        break;
+      case 'as':
+        result = await epHandler.handleASSearch(animeData.title.english) || result;
+        break;
+    }
+    
+    setEpisodeList(result.episodes);
+    setNoEpisodesFound(result.noEpisodesFound);
+    setIsLoading(false);
+  };
+
+  const handleProviderChange = (value: string) => {
+    setSelectedProvider(value);
+    if (data && data.Media) {
+      fetchEpisodesForProvider(value, data.Media);
+    }
+  };
 
   const handleEpisodePress = useCallback(async (episode: epHandler.CommonEpisode) => {
     setIsNavigating(true);
@@ -110,7 +151,7 @@ const AnimeDetails = () => {
       const streamingInfo = await epHandler.handleHianimeStream(episode.id);
       if (streamingInfo) {
         router.push({
-          pathname: '/streamScreen',
+          pathname: '/hianimeStreamScreen',
           params: { 
             episodeTitle: episode.title,
             streamingInfo: JSON.stringify(streamingInfo)
@@ -130,6 +171,29 @@ const AnimeDetails = () => {
       }
     }
   }, [data, isFav, addFavorite, removeFavorite]);
+
+  const pickerSelectStyles = StyleSheet.create({
+    inputIOS: {
+   fontSize: 16,
+   paddingVertical: 12,
+   paddingHorizontal: 10,
+   borderWidth: 1,
+   borderColor: currentTheme.primaryColor,
+   borderRadius: 4,
+   color: currentTheme.textColor,
+   paddingRight: 30,
+    },
+   inputAndroid: {
+   fontSize: 16,
+   paddingHorizontal: 10,
+   paddingVertical: 8,
+   borderWidth: 1,
+   borderColor: currentTheme.primaryColor,
+   borderRadius: 8,
+   color: currentTheme.textColor,
+   paddingRight: 30,
+    },
+    });
 
   const renderEpisodeItem: ListRenderItem<epHandler.CommonEpisode> = useCallback(({ item, index }) => (
     <TouchableOpacity 
@@ -232,8 +296,22 @@ const AnimeDetails = () => {
           </Text>
         )}
 
-        <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Episodes</Text>
-        {loadingEpisodes ? (
+      <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>Episodes</Text>
+        
+        {!epHandler.isHentai(data.Media.genres) && (
+          <View style={styles.providerContainer}>
+            <Text style={[styles.label, { color: currentTheme.textColor }]}>Select Provider:</Text>
+            <RNPickerSelect
+              onValueChange={handleProviderChange}
+              items={providers}
+              value={selectedProvider}
+              style={pickerSelectStyles}
+              placeholder={{}}
+            />
+          </View>
+        )}
+
+        {(loadingEpisodes || isLoading) ? (
           <ActivityIndicator size="small" color={currentTheme.primaryColor} />
         ) : noEpisodesFound ? (
           <Text style={[styles.noEpisodesText, { color: currentTheme.textColor }]}>
@@ -281,6 +359,15 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     borderRadius: 10,
     marginBottom: 10,
+  },
+  providerContainer: {
+    marginBottom: 20,
+    padding: 10,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   title: {
     fontSize: 24,
