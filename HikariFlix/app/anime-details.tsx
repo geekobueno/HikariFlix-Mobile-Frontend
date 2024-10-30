@@ -114,7 +114,8 @@ const AnimeDetails = () => {
         result = await epHandler.handleVASearchVF(animeData.title.english) || result;
         break;
       case 'as':
-        result = await epHandler.handleASSearch(animeData.title.english) || result;
+        const cleanedTitle = animeData.title.english.split(/:|season/i)[0].trim();
+        result = await epHandler.handleASSearch(cleanedTitle) || result;
         break;
     }
     
@@ -148,15 +149,34 @@ const AnimeDetails = () => {
         });
       }
     } else {
-      const streamingInfo = await epHandler.handleHianimeStream(episode.id);
-      if (streamingInfo) {
+      switch (selectedProvider) {
+        case 'hianime':
+          console.log('hianime')
+          const streamingInfo = await epHandler.handleHianimeStream(episode.id);
+          if (streamingInfo) {
         router.push({
           pathname: '/hianimeStreamScreen',
           params: { 
-            episodeTitle: episode.title,
             streamingInfo: JSON.stringify(streamingInfo)
           }
         });
+      }
+          break;
+      case 'as':
+        console.log('as')
+          const info = await epHandler.handleASStream(episode.id);
+          if (info) {
+        router.push({
+          pathname: '/ASEpScreen',
+          params: { 
+            streamingInfo: JSON.stringify(info)
+          }
+        });
+      }
+          break;
+      
+        default:
+          break;
       }
     }
     setIsNavigating(false);

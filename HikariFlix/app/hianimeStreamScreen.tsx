@@ -34,7 +34,6 @@ const isLocalSearchParams = (params: any): params is LocalSearchParams => {
   return (
     typeof params === 'object' &&
     params !== null &&
-    'episodeTitle' in params &&
     'streamingInfo' in params
   );
 };
@@ -45,9 +44,9 @@ const StreamScreen: React.FC = () => {
   const params = useLocalSearchParams();
   const navigation = useNavigation();
 
-  const { episodeTitle, streamingInfo } = useMemo(() => {
+  const { streamingInfo } = useMemo(() => {
     if (!isLocalSearchParams(params)) {
-      return { episodeTitle: '', streamingInfo: '[]' };
+      return { streamingInfo: '[]' };
     }
     return params;
   }, [params]);
@@ -76,11 +75,6 @@ const StreamScreen: React.FC = () => {
     }
   }, [parsedStreamingInfo]);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ 
-      title: episodeTitle,
-    });
-  }, [navigation, episodeTitle]);
 
   useFocusEffect(
     useCallback(() => {

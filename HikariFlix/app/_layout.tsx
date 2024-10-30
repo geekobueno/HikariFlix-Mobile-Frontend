@@ -83,6 +83,13 @@ export default function RootLayout() {
             headerBackVisible: true, 
           }} 
         />
+        <Stack.Screen 
+          name="ASEpScreen" 
+          options={{ 
+            title: 'Anime Stream',
+            headerBackVisible: true, 
+          }} 
+        />
     </Stack>
     </ApolloProvider>
   );

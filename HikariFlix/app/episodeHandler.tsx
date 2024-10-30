@@ -253,9 +253,10 @@ export const handleVASearchVO = async (englishTitle: string | null) => {
       }
       const animeData = searchResult.results;
       const episodesResponse: VAEpisodeResponse = await api.VAEpisodes(animeData.VO.link);
+      const ep = episodesResponse.results.episodes.reverse();
   
       if (episodesResponse.success) {
-        const episodes: CommonEpisode[] = episodesResponse.results.episodes.map((episode, index) => ({
+        const episodes: CommonEpisode[] = ep.map((episode, index) => ({
           id: episode.link,
           title: episode.title,
           episodeNumber: `${index+1}`,
@@ -281,9 +282,10 @@ export const handleVASearchVO = async (englishTitle: string | null) => {
       }
       const animeData = searchResult.results;
       const episodesResponse: VAEpisodeResponse = await api.VAEpisodes(animeData.VF.link);
+      const ep = episodesResponse.results.episodes.reverse();
   
       if (episodesResponse.success) {
-        const episodes: CommonEpisode[] = episodesResponse.results.episodes.map((episode, index) => ({
+        const episodes: CommonEpisode[] = ep.map((episode, index) => ({
           id: episode.link,
           title: episode.title,
           episodeNumber: `${index+1}`,
@@ -312,11 +314,11 @@ export const handleVASearchVO = async (englishTitle: string | null) => {
   
       if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
         const episodes: CommonEpisode[] = episodesResponse.results.map((episode, index) => ({
-          id: episode.url,
+          id: `${animeData[0].link}${episode.url.split('/')[0]}`,
           title: episode.name,
           episodeNumber: `${index+1}`,
         }));
-        return { episodes, noEpisodesFound: false };
+        return {episodes, noEpisodesFound: false };
       }
     } catch (error) {
         console.error('Anime fetch failed :', error);
@@ -328,6 +330,16 @@ export const handleHianimeStream = async (episodeId: string) => {
   try {
     const search = await api.hianimeStream(episodeId);
     return search.results.streamingInfo;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
+export const handleASStream = async (episodeLink: string) => {
+  try {
+    const search = await api.ASStream(episodeLink);
+    return search.results;
   } catch (error) {
     console.log(error);
     return null;
