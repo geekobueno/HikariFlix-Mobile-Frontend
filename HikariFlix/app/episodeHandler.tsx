@@ -314,7 +314,7 @@ export const handleVASearchVO = async (englishTitle: string | null) => {
   
       if (episodesResponse.success && Array.isArray(episodesResponse.results) && episodesResponse.results.length > 0) {
         const episodes: CommonEpisode[] = episodesResponse.results.map((episode, index) => ({
-          id: `${animeData[0].link}${episode.url.split('/')[0]}`,
+          id: `${animeData[0].link.endsWith('/') ? animeData[0].link : animeData[0].link + '/'}${episode.url.split('/')[0]}`,
           title: episode.name,
           episodeNumber: `${index+1}`,
         }));

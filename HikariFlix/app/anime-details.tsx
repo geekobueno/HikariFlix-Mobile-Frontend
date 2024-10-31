@@ -134,6 +134,8 @@ const AnimeDetails = () => {
   const handleEpisodePress = useCallback(async (episode: epHandler.CommonEpisode) => {
     setIsNavigating(true);
     const isHentaiAnime = epHandler.isHentai(data.Media.genres);
+    const selectedProviderValue = selectedProvider;
+    console.log(selectedProviderValue); 
     
     if (isHentaiAnime) {
       const title = episode.slug || episode.title;
@@ -149,7 +151,7 @@ const AnimeDetails = () => {
         });
       }
     } else {
-      switch (selectedProvider) {
+      switch (selectedProviderValue) {
         case 'hianime':
           console.log('hianime')
           const streamingInfo = await epHandler.handleHianimeStream(episode.id);
@@ -162,17 +164,29 @@ const AnimeDetails = () => {
         });
       }
           break;
-      case 'as':
-        console.log('as')
-          const info = await epHandler.handleASStream(episode.id);
-          if (info) {
-        router.push({
-          pathname: '/ASEpScreen',
-          params: { 
-            streamingInfo: JSON.stringify(info)
-          }
-        });
-      }
+          case 'as':
+            console.log('as')
+            const info = await epHandler.handleASStream(episode.id);
+            if (info) {
+              // Explicitly stringify the info object
+              const streamingInfo = JSON.stringify({
+                animeUrl: info.animeUrl || '',
+                totalEpisodes: info.totalEpisodes || 0,
+                episodes: info.episodes || []
+              });
+          
+              console.log('Streaming Info to Pass:', streamingInfo);
+          
+              router.push({
+                pathname: '/ASEpScreen',
+                params: {
+                  info: streamingInfo
+                }
+              });
+              
+            } else {
+              console.log('No info returned from handleASStream');
+            }
           break;
       
         default:
@@ -180,7 +194,7 @@ const AnimeDetails = () => {
       }
     }
     setIsNavigating(false);
-  }, [router, data]);
+  }, [router, data, selectedProvider]);
 
   const handleFavoriteToggle = useCallback(() => {
     if (data && data.Media) {

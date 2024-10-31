@@ -86,7 +86,7 @@ export default function RootLayout() {
         <Stack.Screen 
           name="ASEpScreen" 
           options={{ 
-            title: 'Anime Stream',
+            title: 'Episode List',
             headerBackVisible: true, 
           }} 
         />
