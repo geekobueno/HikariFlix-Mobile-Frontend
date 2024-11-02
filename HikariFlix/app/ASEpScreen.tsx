@@ -1,7 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ListRenderItem } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, ListRenderItem, TouchableOpacity } from 'react-native';
 import { useTheme } from '../constants/theme';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+
+//TO-DO: display films names when on film section
 
 interface LocalSearchParams {
   info: string;
@@ -24,6 +27,7 @@ interface Episode {
 interface Source {
   source: string;
   url: string;
+  name?: string,
 }
 
 const isLocalSearchParams = (params: any): params is LocalSearchParams => {
@@ -37,6 +41,10 @@ const isLocalSearchParams = (params: any): params is LocalSearchParams => {
 const ASepScreen: React.FC = () => {
   const theme = useTheme();
   const params = useLocalSearchParams();
+  const router = useRouter();
+  const navigation = useNavigation();
+  const [isNavigating, setIsNavigating] = useState(false);
+
   
   const { info } = useMemo(() => {
     if (!isLocalSearchParams(params)) {
@@ -47,6 +55,21 @@ const ASepScreen: React.FC = () => {
 
   const [parsedInfo, setParsedInfo] = useState<Info | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  
+  const handleEpisodePress = useCallback(async (epsiode: Episode) => {
+    setIsNavigating(true);
+    const data = epsiode.sources
+    router.push({
+      pathname: '/animesamaStreamScreen',
+      params: { 
+        episodeTitle: data.vostfr[0].name,
+        streams: JSON.stringify(data)
+      }
+    });
+   
+    setIsNavigating(false);
+  }, [router]); 
 
   useEffect(() => {
     try {
@@ -60,11 +83,15 @@ const ASepScreen: React.FC = () => {
   }, [info]);
 
   const renderEpisodeItem: ListRenderItem<Episode> = ({ item }) => (
+    <TouchableOpacity 
+      onPress={() => handleEpisodePress(item)}
+    >
     <View style={styles.episodeContainer}>
       <Text style={[styles.episodeText, { color: theme.textColor }]}>
-        Episode {item.episode}
+        Episode {item.episode} : {item.sources.vostfr[0].name}
       </Text>
     </View>
+    </TouchableOpacity>
   );
 
   return (

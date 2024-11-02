@@ -90,6 +90,13 @@ export default function RootLayout() {
             headerBackVisible: true, 
           }} 
         />
+        <Stack.Screen 
+          name="animeSamaStreamScreen" 
+          options={{ 
+            title: 'Anime Stream',
+            headerBackVisible: true, 
+          }} 
+        />
     </Stack>
     </ApolloProvider>
   );
