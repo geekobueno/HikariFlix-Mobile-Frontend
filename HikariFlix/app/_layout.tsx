@@ -77,7 +77,21 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
-          name="streamScreen" 
+          name="hianimeStreamScreen" 
+          options={{ 
+            title: 'Anime Stream',
+            headerBackVisible: true, 
+          }} 
+        />
+        <Stack.Screen 
+          name="ASEpScreen" 
+          options={{ 
+            title: 'Episode List',
+            headerBackVisible: true, 
+          }} 
+        />
+        <Stack.Screen 
+          name="animeSamaStreamScreen" 
           options={{ 
             title: 'Anime Stream',
             headerBackVisible: true, 
