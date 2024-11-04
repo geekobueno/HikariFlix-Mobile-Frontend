@@ -63,7 +63,6 @@ const ASepScreen: React.FC = () => {
     router.push({
       pathname: '/animesamaStreamScreen',
       params: { 
-        episodeTitle: data.vostfr[0].name,
         streams: JSON.stringify(data)
       }
     });
@@ -75,7 +74,6 @@ const ASepScreen: React.FC = () => {
     try {
       const parsed = JSON.parse(info as string);
       setParsedInfo(parsed);
-      console.log('Parsed Info:', parsed);
     } catch (err) {
       console.error('Parsing error:', err);
       setError('Failed to parse episode information');
@@ -86,11 +84,17 @@ const ASepScreen: React.FC = () => {
     <TouchableOpacity 
       onPress={() => handleEpisodePress(item)}
     >
-    <View style={styles.episodeContainer}>
-      <Text style={[styles.episodeText, { color: theme.textColor }]}>
-        Episode {item.episode} : {item.sources.vostfr[0].name}
-      </Text>
-    </View>
+      <View style={styles.episodeContainer}>
+        {parsedInfo?.animeUrl.includes('films') ? (
+          <Text style={[styles.episodeText, { color: theme.textColor }]}>
+            {item.sources.vostfr[0].name}
+          </Text>
+        ) : (
+          <Text style={[styles.episodeText, { color: theme.textColor }]}>
+            Episode: {item.episode}
+          </Text>
+        )}
+      </View>
     </TouchableOpacity>
   );
 

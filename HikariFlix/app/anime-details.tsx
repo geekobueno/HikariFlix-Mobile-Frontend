@@ -174,9 +174,7 @@ const AnimeDetails = () => {
                 totalEpisodes: info.totalEpisodes || 0,
                 episodes: info.episodes || []
               });
-          
-              console.log('Streaming Info to Pass:', streamingInfo);
-          
+                    
               router.push({
                 pathname: '/ASEpScreen',
                 params: {
