@@ -58,8 +58,8 @@ const AnimeDetails = () => {
 
   const providers = [
     { label: 'Hianime', value: 'hianime' },
-    { label: 'VoirAnime (VO)', value: 'va-vo' },
-    { label: 'VoirAnime (VF)', value: 'va-vf' },
+   // { label: 'VoirAnime (VO)', value: 'va-vo' },
+   // { label: 'VoirAnime (VF)', value: 'va-vf' },
     { label: 'AnimeSama', value: 'as' }
   ];
 
@@ -107,12 +107,12 @@ const AnimeDetails = () => {
       case 'hianime':
         result = await epHandler.handleHianimeSearch(animeData.title.english, animeData.episodes);
         break;
-      case 'va-vo':
+    /*  case 'va-vo':
         result = await epHandler.handleVASearchVO(animeData.title.english) || result;
         break;
       case 'va-vf':
         result = await epHandler.handleVASearchVF(animeData.title.english) || result;
-        break;
+        break; */
       case 'as':
         const cleanedTitle = animeData.title.english.split(/:|season/i)[0].trim();
         result = await epHandler.handleASSearch(cleanedTitle) || result;
